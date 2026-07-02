@@ -25,6 +25,10 @@ describe("toHue", function () {
     assert.throws(() => toHue("notacolor", "vzw"));
     assert.throws(() => toHue({}, "vzw"));
   });
+  it("throws on NaN and non-finite numbers", function () {
+    assert.throws(() => toHue([NaN, 0, 0], "vzw"));
+    assert.throws(() => toHue(NaN, "vzw"));
+  });
 });
 
 describe("toDuration", function () {
@@ -49,6 +53,11 @@ describe("toDuration", function () {
     assert.throws(() => toDuration("6 days"));
     assert.throws(() => toDuration("soon"));
   });
+  it("throws on NaN and non-integer numbers", function () {
+    assert.throws(() => toDuration(NaN));
+    assert.throws(() => toDuration(Infinity));
+    assert.throws(() => toDuration(10.5));
+  });
 });
 
 describe("toLevel", function () {
@@ -58,5 +67,9 @@ describe("toLevel", function () {
     assert.throws(() => toLevel(11, 10));
     assert.throws(() => toLevel(-1, 100));
     assert.throws(() => toLevel("high", 100));
+  });
+  it("throws on non-integer strings", function () {
+    assert.throws(() => toLevel("10.5", 100));
+    assert.throws(() => toLevel("10abc", 100));
   });
 });

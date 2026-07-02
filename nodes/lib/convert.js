@@ -6,7 +6,10 @@ const WHITE = 255;
 function toHue(color, generation) {
   let rgb;
   if (Array.isArray(color)) {
-    if (color.length !== 3 || color.some((c) => typeof c !== "number" || c < 0 || c > 255)) {
+    if (
+      color.length !== 3 ||
+      color.some((c) => typeof c !== "number" || !Number.isFinite(c) || c < 0 || c > 255)
+    ) {
       throw new Error(`Invalid RGB array: ${JSON.stringify(color)}`);
     }
     rgb = color;
@@ -16,6 +19,7 @@ function toHue(color, generation) {
     rgb = convert.keyword.rgb(color.replace(/\s/g, "").toLowerCase());
     if (!rgb) throw new Error(`Unknown color name: ${color}`);
   } else if (typeof color === "number") {
+    if (!Number.isFinite(color)) throw new Error(`Invalid hue number: ${color}`);
     if (color < 0 || color > 361) throw new Error(`Hue out of range 0-361: ${color}`);
     if (color === 361) return WHITE;
     rgb = convert.hsv.rgb([color, 100, 100]);
@@ -29,7 +33,13 @@ function toHue(color, generation) {
 }
 
 function toDuration(input) {
-  if (typeof input === "number" || /^\d+$/.test(String(input).trim())) {
+  if (typeof input === "number") {
+    if (!Number.isInteger(input) || input < 0 || input > 255) {
+      throw new Error(`Duration byte out of range 0-255: ${input}`);
+    }
+    return input;
+  }
+  if (/^\d+$/.test(String(input).trim())) {
     const n = parseInt(input, 10);
     if (n < 0 || n > 255) throw new Error(`Duration byte out of range 0-255: ${input}`);
     return n;
@@ -46,8 +56,16 @@ function toDuration(input) {
 }
 
 function toLevel(input, max) {
-  const n = parseInt(input, 10);
-  if (isNaN(n) || n < 0 || n > max) {
+  let n;
+  if (typeof input === "number") {
+    if (!Number.isInteger(input)) throw new Error(`Level out of range 0-${max}: ${input}`);
+    n = input;
+  } else if (typeof input === "string" && /^\d+$/.test(input.trim())) {
+    n = parseInt(input, 10);
+  } else {
+    throw new Error(`Level out of range 0-${max}: ${input}`);
+  }
+  if (n < 0 || n > max) {
     throw new Error(`Level out of range 0-${max}: ${input}`);
   }
   return n;
