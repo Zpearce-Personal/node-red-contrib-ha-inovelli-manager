@@ -1615,11 +1615,11 @@ describe("inovelli-notification-manager", function () {
     });
     helper.load(notifNode, flow, function () {
       const n1 = helper.getNode("n1");
-      n1.on("call:error", () => {});
+      let output = false;
+      helper.getNode("h").on("input", function () { output = true; });
       n1.receive({ payload: { effect: "sparkle" } });
       setTimeout(function () {
-        // No output should have been produced
-        done();
+        output ? done(new Error("node emitted output despite invalid effect")) : done();
       }, 50);
     });
   });
