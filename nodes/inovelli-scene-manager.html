@@ -25,10 +25,19 @@
       zha: "IEEE address(es)",
       zigbee2mqtt: "Device name(s)",
     };
-    const BUTTONS = [
+    const BUTTONS_BASE = [
       ["up", "Up"], ["down", "Down"], ["config", "Config"],
+    ];
+    const BUTTONS_AUX = [
       ["aux_up", "Aux Up"], ["aux_down", "Aux Down"], ["aux_config", "Aux Config"],
     ];
+    // Aux taps only exist on Blue Series (Zigbee2MQTT/ZHA) devices — Z-Wave and
+    // Matter devices never emit them, so hide those options for those integrations.
+    function buttonsFor(integration) {
+      return integration === "zigbee2mqtt" || integration === "zha"
+        ? BUTTONS_BASE.concat(BUTTONS_AUX)
+        : BUTTONS_BASE;
+    }
     const TAPS = [
       ["single", "1x"], ["double", "2x"], ["triple", "3x"], ["quadruple", "4x"],
       ["quintuple", "5x"], ["held", "Hold"], ["release", "Release"],
@@ -70,6 +79,18 @@
           $model.val(MODELS[integration].some(([id]) => id === self.model) ? self.model : MODELS[integration][0][0]);
           refreshVisibility();
           refreshRows();
+          refreshButtonOptions();
+        }
+        function refreshButtonOptions() {
+          const integration = $("#node-input-integration").val();
+          const options = buttonsFor(integration);
+          $("#node-scene-mappings").editableList("items").each(function () {
+            const $button = $(this).find(".scene-button");
+            const current = $button.val();
+            $button.empty();
+            options.forEach(([v, l]) => $button.append($("<option/>", { value: v, text: l })));
+            $button.val(options.some(([v]) => v === current) ? current : "up");
+          });
         }
         function refreshVisibility() {
           const integration = $("#node-input-integration").val();
@@ -93,7 +114,7 @@
               .appendTo(container);
             const $button = $("<select/>", { class: "scene-button" })
               .css("width", "45%").appendTo($row);
-            BUTTONS.forEach(([v, l]) => $button.append($("<option/>", { value: v, text: l })));
+            buttonsFor($("#node-input-integration").val()).forEach(([v, l]) => $button.append($("<option/>", { value: v, text: l })));
             $button.val(data.button);
             const $tap = $("<select/>", { class: "scene-tap" })
               .css("width", "45%").appendTo($row);

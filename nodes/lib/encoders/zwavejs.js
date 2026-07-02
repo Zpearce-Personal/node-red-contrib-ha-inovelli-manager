@@ -32,6 +32,9 @@ function notification(resolved, fields, target) {
 
   let value;
   if (device.generation === "vzw") {
+    if (!fields.clear && fields.effectId === 255) {
+      throw new Error("Use clear: true to stop a notification on Z-Wave 2-1 devices (effect 255 would overflow the packed value)");
+    }
     value = fields.clear ? 0 : packVzw(fields);
   } else {
     const clears = fields.clear || fields.effectId === 0 || fields.duration === 0;

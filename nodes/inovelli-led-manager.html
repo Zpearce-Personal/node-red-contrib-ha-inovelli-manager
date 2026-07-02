@@ -95,6 +95,11 @@
         bindOutput("node-input-fanBrightness", "fanBrightnessOutput");
         bindOutput("node-input-fanBrightnessOff", "fanBrightnessOffOutput");
         refreshModels();
+
+        // Slider <output> spans are blank until first drag — seed them from the
+        // inputs' current (config-loaded) values.
+        ["color", "colorOff", "brightness", "brightnessOff", "fanColor", "fanBrightness", "fanBrightnessOff"]
+          .forEach(function (id) { $("#" + id + "Output").text($("#node-input-" + id).val()); });
       },
     });
   })();

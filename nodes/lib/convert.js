@@ -26,6 +26,8 @@ function toHue(color, generation) {
   } else {
     throw new Error(`Unsupported color value: ${JSON.stringify(color)}`);
   }
+  // Any r=g=b input (including black) maps to WHITE (255): the device hue byte
+  // has no representation for black/grey, and 255 is the wire value for "white LED".
   if (rgb[0] === rgb[1] && rgb[1] === rgb[2]) return WHITE;
   const hslHue = convert.rgb.hsl(rgb)[0];
   const scale = generation === "lzw" ? 17 / 24 : 254 / 360;

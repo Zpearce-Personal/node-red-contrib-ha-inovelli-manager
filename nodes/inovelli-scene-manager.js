@@ -13,6 +13,14 @@ module.exports = function (RED) {
     }
     const ids = String(config.idfilter || "").split(",").map((s) => s.trim()).filter(Boolean);
 
+    let resolved = null;
+    try {
+      resolved = d.resolve(config.model);
+    } catch (e) {
+      node.error(`Unknown model: ${config.model}`);
+      node.status({ fill: "red", shape: "ring", text: `Unknown model: ${config.model}` });
+    }
+
     // Returns {button, tap, id} or null when the message is not a scene event.
     function normalize(msg) {
       const p = msg.payload;
@@ -69,7 +77,7 @@ module.exports = function (RED) {
     }
 
     node.on("input", (msg, send, done) => {
-      const resolved = d.resolve(config.model);
+      if (!resolved) return done();
       const ev = normalize(msg);
       if (!ev || ev.button === undefined || ev.tap === undefined) return done();
       // Device filter: matter is matched by entity; others by idfilter.

@@ -17,18 +17,18 @@ function notification(resolved, fields, target) {
   if (!device.notification || !device.notification.zigbee) {
     throw new Error("Device does not support Zigbee LED effects");
   }
-  const effect = fields.clear ? "clear_effect" : fields.effectName;
-  const common = { effect, color: fields.color, level: fields.level, duration: fields.duration };
-  const body =
-    fields.led === "all"
-      ? { led_effect: common }
-      : { individual_led_effect: { led: String(fields.led), ...common } };
   if (fields.led !== "all") {
     const led = parseInt(fields.led, 10);
     if (isNaN(led) || led < 1 || led > 7) {
       throw new Error(`Invalid LED number: ${fields.led} (1=bottom .. 7=top)`);
     }
   }
+  const effect = fields.clear ? "clear_effect" : fields.effectName;
+  const common = { effect, color: fields.color, level: fields.level, duration: fields.duration };
+  const body =
+    fields.led === "all"
+      ? { led_effect: common }
+      : { individual_led_effect: { led: String(fields.led), ...common } };
   return [publish(target, body)];
 }
 

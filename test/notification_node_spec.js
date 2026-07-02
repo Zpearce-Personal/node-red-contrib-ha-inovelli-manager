@@ -163,4 +163,89 @@ describe("inovelli-notification-manager", function () {
       }, 50);
     });
   });
+
+  it("errors on a matter animated effect with no color select entity configured", function (done) {
+    const flow = flowFor({
+      integration: "matter", model: "vtm31-sn",
+      matterlight: "light.office_rgb", mattereffect: "select.office_led_effect",
+      mattercolor: "",
+      color: "240", level: "100", duration: "255", effect: "Chase", led: "all",
+      clear: false, multicast: false,
+    });
+    helper.load(notifNode, flow, function () {
+      const n1 = helper.getNode("n1");
+      let output = false;
+      helper.getNode("h").on("input", function () { output = true; });
+      n1.receive({ payload: {} });
+      setTimeout(function () {
+        output ? done(new Error("node emitted output despite missing color select entity")) : done();
+      }, 50);
+    });
+  });
+
+  it("keeps matter clear timers isolated per device", function (done) {
+    this.timeout(5000);
+    const flow = flowFor({
+      integration: "matter", model: "vtm31-sn",
+      matterlight: "light.deviceA_rgb", mattereffect: "select.deviceA_led_effect",
+      mattercolor: "select.deviceA_led_color",
+      color: "0", level: "100", duration: "1", effect: "Solid", led: "all",
+      clear: false, multicast: false,
+    });
+    helper.load(notifNode, flow, function () {
+      const n1 = helper.getNode("n1");
+      const seen = [];
+      helper.getNode("h").on("input", function (msg) { seen.push(msg.payload); });
+
+      // Schedules device A's clear timer (duration "1" -> fires ~1s later).
+      n1.receive({ payload: {} });
+
+      // ~200ms later, a message for a completely different device arrives,
+      // overriding all three matter entities and using a duration (255) that
+      // never schedules its own clear. This must not cancel device A's timer.
+      setTimeout(function () {
+        n1.receive({
+          payload: {
+            light_entity: "light.deviceB_rgb",
+            effect_entity: "select.deviceB_led_effect",
+            color_entity: "select.deviceB_led_color",
+            duration: 255,
+          },
+        });
+      }, 200);
+
+      setTimeout(function () {
+        try {
+          const clearMsgs = seen.filter((p) =>
+            p.action === "light.turn_off" ||
+            (p.action === "select.select_option" && p.data && p.data.option === "Off"));
+          assert.ok(clearMsgs.length > 0, "expected device A's clear messages to arrive");
+          clearMsgs.forEach((p) => {
+            assert.deepStrictEqual(
+              p.target,
+              { entity_id: [p.action === "light.turn_off" ? "light.deviceA_rgb" : "select.deviceA_led_effect"] }
+            );
+          });
+          done();
+        } catch (e) { done(e); }
+      }, 1600);
+    });
+  });
+
+  it("errors when the payload model does not match the configured integration's protocol", function (done) {
+    const flow = flowFor({
+      integration: "zwave_js", model: "vzw31-sn", entityid: "light.office",
+      color: "0", level: "100", duration: "255", effect: "solid", led: "all",
+      clear: false, multicast: false,
+    });
+    helper.load(notifNode, flow, function () {
+      const n1 = helper.getNode("n1");
+      let output = false;
+      helper.getNode("h").on("input", function () { output = true; });
+      n1.receive({ payload: { model: "vzm31-sn" } });
+      setTimeout(function () {
+        output ? done(new Error("node emitted output despite protocol/model mismatch")) : done();
+      }, 50);
+    });
+  });
 });
