@@ -1,0 +1,10 @@
+[
+  { "id": "inject1", "type": "inject", "name": "Trigger", "props": [{ "p": "payload" }],
+    "payload": "{\"color\":\"red\",\"effect\":\"pulse\",\"duration\":\"30 seconds\",\"level\":80}",
+    "payloadType": "json", "wires": [["notif1"]] },
+  { "id": "notif1", "type": "inovelli-notification-manager", "name": "Office notification",
+    "integration": "zigbee2mqtt", "model": "vzm31-sn", "basetopic": "zigbee2mqtt", "devicename": "Office Switch",
+    "color": 0, "level": 100, "duration": 255, "effect": "pulse", "led": "all",
+    "clear": false, "multicast": false, "wires": [["action1"]] },
+  { "id": "action1", "type": "api-call-service", "name": "HA Action", "wires": [[]] }
+]
