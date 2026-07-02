@@ -71,4 +71,48 @@ function toLevel(input, max) {
   return n;
 }
 
-module.exports = { toHue, toDuration, toLevel, WHITE };
+// White Series (Matter) LED Color select options with canonical hue positions (degrees).
+const MATTER_COLORS = [
+  ["Red", 0], ["Orange", 30], ["Lemon", 50], ["Lime", 90], ["Green", 120],
+  ["Teal", 165], ["Cyan", 180], ["Aqua", 210], ["Blue", 240], ["Violet", 270],
+  ["Magenta", 300], ["Pink", 330],
+];
+const MATTER_BRIGHTNESS_STEPS = [0, 1, 3, 5, 8, 10, 13, 16, 20, 23, 26, 30, 33, 36, 40, 45, 50, 60, 70, 80, 90, 100];
+
+function snapToMatterColor(color) {
+  const hueByte = toHue(color, "vtm");
+  if (hueByte === WHITE) return "White";
+  const deg = (hueByte * 360) / 254;
+  let best = MATTER_COLORS[0][0];
+  let bestDist = Infinity;
+  for (const [name, h] of MATTER_COLORS) {
+    const d = Math.min(Math.abs(deg - h), 360 - Math.abs(deg - h));
+    if (d < bestDist) {
+      bestDist = d;
+      best = name;
+    }
+  }
+  return best;
+}
+
+function snapToMatterBrightness(pct) {
+  let best = MATTER_BRIGHTNESS_STEPS[0];
+  for (const step of MATTER_BRIGHTNESS_STEPS) {
+    if (Math.abs(pct - step) < Math.abs(pct - best)) best = step;
+  }
+  return best;
+}
+
+function durationToMs(byte) {
+  if (byte <= 0 || byte >= 255) return null;
+  if (byte <= 60) return byte * 1000;
+  if (byte <= 120) return (byte - 60) * 60000;
+  return (byte - 120) * 3600000;
+}
+
+function hueToRgb(hueByte) {
+  if (hueByte === WHITE) return [255, 255, 255];
+  return convert.hsv.rgb([(hueByte * 360) / 254, 100, 100]);
+}
+
+module.exports = { toHue, toDuration, toLevel, WHITE, snapToMatterColor, snapToMatterBrightness, durationToMs, hueToRgb };
