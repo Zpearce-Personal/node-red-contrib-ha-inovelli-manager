@@ -17,42 +17,25 @@ function notification(resolved, fields, target) {
     command_type: "server",
     manufacturer: MANUFACTURER,
   };
+  let data;
   if (fields.led === "all") {
-    return [{
-      payload: {
-        action: "zha.issue_zigbee_cluster_command",
-        data: {
-          ieee: base.ieee,
-          endpoint_id: base.endpoint_id,
-          cluster_id: base.cluster_id,
-          cluster_type: base.cluster_type,
-          command: 1,
-          command_type: base.command_type,
-          manufacturer: base.manufacturer,
-          params: { led_effect: effectId, led_color: fields.color, led_level: fields.level, led_duration: fields.duration },
-        },
-      },
-    }];
+    data = {
+      ...base,
+      command: 1,
+      params: { led_effect: effectId, led_color: fields.color, led_level: fields.level, led_duration: fields.duration },
+    };
+  } else {
+    const led = parseInt(fields.led, 10);
+    if (isNaN(led) || led < 1 || led > 7) {
+      throw new Error(`Invalid LED number: ${fields.led} (1=bottom .. 7=top)`);
+    }
+    data = {
+      ...base,
+      command: 3,
+      params: { led_number: led - 1, led_effect: effectId, led_color: fields.color, led_level: fields.level, led_duration: fields.duration },
+    };
   }
-  const led = parseInt(fields.led, 10);
-  if (isNaN(led) || led < 1 || led > 7) {
-    throw new Error(`Invalid LED number: ${fields.led} (1=bottom .. 7=top)`);
-  }
-  return [{
-    payload: {
-      action: "zha.issue_zigbee_cluster_command",
-      data: {
-        ieee: base.ieee,
-        endpoint_id: base.endpoint_id,
-        cluster_id: base.cluster_id,
-        cluster_type: base.cluster_type,
-        command: 3,
-        command_type: base.command_type,
-        manufacturer: base.manufacturer,
-        params: { led_number: led - 1, led_effect: effectId, led_color: fields.color, led_level: fields.level, led_duration: fields.duration },
-      },
-    },
-  }];
+  return [{ payload: { action: "zha.issue_zigbee_cluster_command", data } }];
 }
 
 function ledBar(resolved, section, fields, target) {

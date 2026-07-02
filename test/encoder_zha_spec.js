@@ -26,8 +26,16 @@ describe("zha notification", function () {
     const msgs = enc.notification(resolve("vzm31-sn"), {
       led: 7, effectId: 4, color: 0, level: 80, duration: 10, clear: false,
     }, target);
-    assert.strictEqual(msgs[0].payload.data.command, 3);
-    assert.strictEqual(msgs[0].payload.data.params.led_number, 6);
+    assert.deepStrictEqual(msgs[0].payload.data, {
+      ieee: target.ieee,
+      endpoint_id: 1,
+      cluster_id: 64561,
+      cluster_type: "in",
+      command: 3,
+      command_type: "server",
+      manufacturer: 4655,
+      params: { led_number: 6, led_effect: 4, led_color: 0, led_level: 80, led_duration: 10 },
+    });
   });
   it("clears with effect 255", function () {
     const msgs = enc.notification(resolve("vzm31-sn"), {
