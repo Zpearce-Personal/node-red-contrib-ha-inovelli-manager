@@ -20,6 +20,13 @@
   "scripts": {
     "test": "mocha \"test/**/*_spec.js\""
   },
+  "files": [
+    "nodes",
+    "examples",
+    "multicast",
+    "README.md",
+    "LICENSE"
+  ],
   "node-red": {
     "nodes": {
       "inovelli-notification-manager": "nodes/inovelli-notification-manager.js",

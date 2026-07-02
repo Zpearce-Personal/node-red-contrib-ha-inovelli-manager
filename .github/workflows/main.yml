@@ -1,18 +1,18 @@
-name: Node.js Package
+name: CI
 on:
-  release:
-    types: [created]
+  push:
+    branches: [main]
+  pull_request:
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
     steps:
-    - uses: actions/checkout@v4.0.0
-    # Setup .npmrc file to publish to npm
-    - uses: actions/setup-node@v3.8.1
-      with:
-        node-version: '12.x'
-        registry-url: 'https://registry.npmjs.org'
-    - run: npm install
-    - run: npm publish
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm test
