@@ -21,7 +21,10 @@ const ZWAVE_VALUE_RAW_TO_TAP = {
   0: "single", 1: "release", 2: "held", 3: "double",
   4: "triple", 5: "quadruple", 6: "quintuple",
 };
-const ZHA_BUTTON = { button_1: "down", button_2: "up", button_3: "config" };
+const ZHA_BUTTON = {
+  button_1: "down", button_2: "up", button_3: "config",
+  button_4: "aux_down", button_5: "aux_up", button_6: "aux_config",
+};
 const ZHA_PRESS_TO_TAP = {
   press: "single", release: "release", hold: "held", double: "double",
   triple: "triple", quadruple: "quadruple", quintuple: "quintuple",

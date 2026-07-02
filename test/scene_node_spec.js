@@ -9,6 +9,11 @@ const MAPPINGS = JSON.stringify([
   { button: "config", tap: "single" },
 ]);
 
+const AUX_MAPPINGS = JSON.stringify([
+  { button: "aux_up", tap: "single" },
+  { button: "aux_config", tap: "double" },
+]);
+
 function flow21(extra) {
   return [
     { id: "n1", type: "inovelli-scene-manager", wires: [["h0"], ["h1"]],
@@ -16,6 +21,10 @@ function flow21(extra) {
     { id: "h0", type: "helper" },
     { id: "h1", type: "helper" },
   ];
+}
+
+function flowAux(extra) {
+  return flow21({ mappings: AUX_MAPPINGS, ...extra });
 }
 
 describe("inovelli-scene-manager", function () {
@@ -95,6 +104,32 @@ describe("inovelli-scene-manager", function () {
           event_type: "zwave_js_value_notification",
           event: { domain: "zwave_js", node_id: 13, command_class: 91,
             property: "scene", property_key: "002", value: "KeyPressed", value_raw: 0 },
+        },
+      });
+    });
+  });
+
+  it("routes zigbee2mqtt aux switch actions", function (done) {
+    const flow = flowAux({ integration: "zigbee2mqtt", model: "vzm31-sn", idfilter: "Office Switch" });
+    helper.load(sceneNode, flow, function () {
+      helper.getNode("h1").on("input", function () { done(); });
+      helper.getNode("h0").on("input", function () { done(new Error("wrong output")); });
+      helper.getNode("n1").receive({
+        topic: "zigbee2mqtt/Office Switch",
+        payload: { action: "aux_config_double" },
+      });
+    });
+  });
+
+  it("routes zha aux switch button commands", function (done) {
+    const flow = flowAux({ integration: "zha", model: "vzm31-sn", idfilter: "00:0d:6f:00:0a:bb:cc:dd" });
+    helper.load(sceneNode, flow, function () {
+      helper.getNode("h0").on("input", function () { done(); });
+      helper.getNode("h1").on("input", function () { done(new Error("wrong output")); });
+      helper.getNode("n1").receive({
+        payload: {
+          event_type: "zha_event",
+          event: { device_ieee: "00:0d:6f:00:0a:bb:cc:dd", command: "button_5_press", args: {} },
         },
       });
     });

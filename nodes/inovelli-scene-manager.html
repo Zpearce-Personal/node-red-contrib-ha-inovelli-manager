@@ -25,7 +25,10 @@
       zha: "IEEE address(es)",
       zigbee2mqtt: "Device name(s)",
     };
-    const BUTTONS = [["up", "Up"], ["down", "Down"], ["config", "Config"]];
+    const BUTTONS = [
+      ["up", "Up"], ["down", "Down"], ["config", "Config"],
+      ["aux_up", "Aux Up"], ["aux_down", "Aux Down"], ["aux_config", "Aux Config"],
+    ];
     const TAPS = [
       ["single", "1x"], ["double", "2x"], ["triple", "3x"], ["quadruple", "4x"],
       ["quintuple", "5x"], ["held", "Hold"], ["release", "Release"],
@@ -217,5 +220,5 @@
     <li><b>Zigbee2MQTT</b> — an <code>mqtt in</code> node subscribed to <code>zigbee2mqtt/&lt;device name&gt;</code> (or its <code>.../action</code> subtopic); both raw string and parsed-JSON action payloads are accepted.</li>
     <li><b>Matter</b> — a Home Assistant <code>events: state</code> node watching the three <code>event.*</code> entities configured above.</li>
   </ul>
-  <p>Note: Red Series 2-1 auxiliary-switch button presses (<code>aux_up</code>/<code>aux_down</code>/<code>aux_config</code>) are only observable as Zigbee2MQTT/ZHA-style <code>aux_*</code> actions; they are not decoded from <code>zwave_js_value_notification</code> events, so an aux switch paired only via Z-Wave JS cannot be routed by this node.</p>
+  <p>Note: auxiliary-switch button taps are supported for Blue Series (Zigbee) devices — reported as Zigbee2MQTT <code>aux_up</code>/<code>aux_down</code>/<code>aux_config</code> actions or ZHA <code>button_4</code>/<code>button_5</code>/<code>button_6</code> events — and are routed via the Aux Up/Aux Down/Aux Config button options in the Output Mapping list. Red Series 2-1 aux taps (Z-Wave Central Scene keys 004&ndash;006) are <em>not</em> supported, because Inovelli's per-button key assignment is unverified.</p>
 </script>
