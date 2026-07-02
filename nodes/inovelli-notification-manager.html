@@ -3,20 +3,20 @@
     // Kept in sync with nodes/lib/devices.js — editor cannot require() it.
     const MODELS = {
       zwave_js: [
-        ["vzw31-sn", "VZW31-SN 2-1 (Red)"], ["vzw32-sn", "VZW32-SN mmWave (Red)"],
+        ["vzw31-sn", "VZW31-SN 2-1 (Red)"], ["vzw32-sn", "VZW32-SN mmWave 2-1 (Red)"],
         ["lzw30-sn", "LZW30-SN On/Off (Red)"], ["lzw31-sn", "LZW31-SN Dimmer (Red)"],
         ["lzw36", "LZW36 Fan + Light (Red)"],
       ],
       zigbee2mqtt: [
-        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave (Blue)"],
-        ["vzm35-sn", "VZM35-SN Fan (Blue)"],
+        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave 2-1 (Blue)"],
+        ["vzm35-sn", "VZM35-SN Fan Switch (Blue)"],
       ],
       zha: [
-        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave (Blue)"],
-        ["vzm35-sn", "VZM35-SN Fan (Blue)"],
+        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave 2-1 (Blue)"],
+        ["vzm35-sn", "VZM35-SN Fan Switch (Blue)"],
       ],
       matter: [
-        ["vtm31-sn", "VTM31-SN 2-1 (White)"], ["vtm35-sn", "VTM35-SN Fan (White)"],
+        ["vtm31-sn", "VTM31-SN 2-1 (White)"], ["vtm35-sn", "VTM35-SN Fan Switch (White)"],
       ],
     };
     const EFFECTS_21_ALL = ["off", "solid", "fast_blink", "slow_blink", "pulse", "chase",
@@ -150,9 +150,6 @@
       border-radius: 5px;
       background: linear-gradient(to right, rgb(0,0,0), rgb(255,255,255));
       outline: none;
-    }
-    .brightness-input input {
-      width: 100% !important;
     }
     .brightness-picker-input {
       display: inline-block;
