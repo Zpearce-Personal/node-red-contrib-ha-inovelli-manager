@@ -119,6 +119,34 @@ describe("inovelli-notification-manager", function () {
     });
   });
 
+  it("sends the matter clear sequence after the duration elapses", function (done) {
+    this.timeout(5000);
+    const flow = flowFor({
+      integration: "matter", model: "vtm31-sn",
+      matterlight: "light.office_rgb", mattereffect: "select.office_led_effect",
+      mattercolor: "select.office_led_color",
+      color: "0", level: "100", duration: "1", effect: "Solid", led: "all",
+      clear: false, multicast: false,
+    });
+    helper.load(notifNode, flow, function () {
+      const actions = [];
+      helper.getNode("h").on("input", function (msg) {
+        actions.push(msg.payload.action);
+        if (actions.length === 3) {
+          try {
+            assert.deepStrictEqual(actions, [
+              "light.turn_on",
+              "light.turn_off",
+              "select.select_option",
+            ]);
+            done();
+          } catch (e) { done(e); }
+        }
+      });
+      helper.getNode("n1").receive({ payload: {} });
+    });
+  });
+
   it("reports invalid input through done/error", function (done) {
     const flow = flowFor({
       integration: "zwave_js", model: "vzw31-sn", entityid: "light.office",

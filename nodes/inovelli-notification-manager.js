@@ -24,7 +24,7 @@ module.exports = function (RED) {
   function InovelliNotificationManager(config) {
     RED.nodes.createNode(this, config);
     const node = this;
-    node._clearTimer = null;
+    node._clearTimers = new Map();
 
     node.on("input", (msg, send, done) => {
       const p = msg.payload && typeof msg.payload === "object" ? msg.payload : {};
@@ -84,9 +84,16 @@ module.exports = function (RED) {
             effectName: String(effectInput), rawColor, level, duration, clear,
           }, entities);
           msgs = result.messages;
-          if (node._clearTimer) clearTimeout(node._clearTimer);
+          const timerKey = entities.effectSelect || entities.light;
+          const prev = node._clearTimers.get(timerKey);
+          if (prev) clearTimeout(prev);
+          node._clearTimers.delete(timerKey);
           if (result.clearAfterMs && result.clearMessages.length) {
-            node._clearTimer = setTimeout(() => send([result.clearMessages]), result.clearAfterMs);
+            const t = setTimeout(() => {
+              node._clearTimers.delete(timerKey);
+              send([result.clearMessages]);
+            }, result.clearAfterMs);
+            node._clearTimers.set(timerKey, t);
           }
         } else {
           throw new Error(`Unknown integration: ${integration}. Use zwave_js, zigbee2mqtt, zha, or matter.`);
@@ -101,7 +108,8 @@ module.exports = function (RED) {
     });
 
     node.on("close", () => {
-      if (node._clearTimer) clearTimeout(node._clearTimer);
+      for (const t of node._clearTimers.values()) clearTimeout(t);
+      node._clearTimers.clear();
     });
   }
   RED.nodes.registerType("inovelli-notification-manager", InovelliNotificationManager);
