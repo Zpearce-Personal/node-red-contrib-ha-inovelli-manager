@@ -23,8 +23,9 @@ describe("inovelli-led-manager", function () {
         seen.push(msg.payload.data);
         if (seen.length === 2) {
           try {
+            // Config color "170" is a hue DEGREE: 170 * 254/360 rounds to 120.
             assert.deepStrictEqual(seen, [
-              { parameter: 95, value: 170 },
+              { parameter: 95, value: 120 },
               { parameter: 98, value: 5 },
             ]);
             done();
@@ -68,13 +69,38 @@ describe("inovelli-led-manager", function () {
     helper.load(ledNode, flow, function () {
       helper.getNode("h").on("input", function (msg) {
         try {
+          // Config color "170" is a hue DEGREE: 170 * 254/360 rounds to 120.
           assert.deepStrictEqual(JSON.parse(msg.payload.data.payload), {
-            ledColorWhenOn: 170, ledIntensityWhenOn: 33,
+            ledColorWhenOn: 120, ledIntensityWhenOn: 33,
           });
           done();
         } catch (e) { done(e); }
       });
       helper.getNode("n1").receive({ payload: {} });
+    });
+  });
+
+  it("converts RGB array payload colors to device hue bytes (Z2M)", function (done) {
+    const flow = [
+      { id: "n1", type: "inovelli-led-manager", wires: [["h"]],
+        integration: "zigbee2mqtt", model: "vzm31-sn", basetopic: "zigbee2mqtt",
+        devicename: "Office Switch",
+        toggleColor: false, toggleColorOff: false, toggleBrightness: false,
+        toggleBrightnessOff: false, toggleFanColor: false, toggleFanBrightness: false,
+        toggleFanBrightnessOff: false },
+      { id: "h", type: "helper" },
+    ];
+    helper.load(ledNode, flow, function () {
+      helper.getNode("h").on("input", function (msg) {
+        try {
+          // Blue [0,0,255] -> hue 240 deg -> 240 * 254/360 rounds to 169.
+          assert.deepStrictEqual(JSON.parse(msg.payload.data.payload), {
+            ledColorWhenOn: 169,
+          });
+          done();
+        } catch (e) { done(e); }
+      });
+      helper.getNode("n1").receive({ payload: { color: [0, 0, 255] } });
     });
   });
 

@@ -1,26 +1,13 @@
 module.exports = function (RED) {
   const devices = require("./lib/devices");
   const convert = require("./lib/convert");
+  const { numeric, entityList } = require("./lib/util");
   const encoders = {
     zwave_js: require("./lib/encoders/zwavejs"),
     zigbee2mqtt: require("./lib/encoders/zigbee2mqtt"),
     zha: require("./lib/encoders/zha"),
     matter: require("./lib/encoders/matter"),
   };
-
-  function numeric(v) {
-    return typeof v === "string" && /^\d+$/.test(v.trim()) ? parseInt(v, 10) : v;
-  }
-  function toColorByte(color, generation) {
-    // Strings (color names, hex) are converted; numeric values (device hue bytes) pass through.
-    if (typeof color === "string") {
-      return convert.toHue(color, generation);
-    }
-    return color;
-  }
-  function entityList(v) {
-    return String(v).split(",").map((s) => s.trim()).filter(Boolean);
-  }
 
   function InovelliLEDManager(config) {
     RED.nodes.createNode(this, config);
@@ -35,32 +22,28 @@ module.exports = function (RED) {
         if (!device.protocols.includes(integration)) {
           throw new Error(`${resolved.id} is not a ${integration} device`);
         }
-        // Collect raw active fields: payload presence or checked toggle.
+        const gen = device.generation;
+        // Collect active fields: payload presence or checked toggle.
         function active(payloadKey, toggleKey) {
           if (p[payloadKey] !== undefined) return numeric(p[payloadKey]);
           if (config[toggleKey]) return numeric(config[payloadKey]);
           return undefined;
         }
-        // For non-matter integrations, convert color names to device hue bytes; for matter, keep raw.
-        function colorForIntegration(payloadKey, toggleKey) {
-          const raw = active(payloadKey, toggleKey);
-          if (raw === undefined) return undefined;
-          if (integration === "matter") return raw; // Keep raw for matter's snapToMatterColor
-          return toColorByte(raw, device.generation);
-        }
         const main = {
-          color: colorForIntegration("color", "toggleColor"),
-          colorOff: colorForIntegration("colorOff", "toggleColorOff"),
+          color: active("color", "toggleColor"),
+          colorOff: active("colorOff", "toggleColorOff"),
           brightnessOn: active("brightness", "toggleBrightness"),
           brightnessOff: active("brightnessOff", "toggleBrightnessOff"),
         };
         const fan = {
-          color: colorForIntegration("fanColor", "toggleFanColor"),
+          color: active("fanColor", "toggleFanColor"),
           brightnessOn: active("fanBrightness", "toggleFanBrightness"),
           brightnessOff: active("fanBrightnessOff", "toggleFanBrightnessOff"),
         };
-        // Validate brightness levels against device max.
+        // Normalize values.
         for (const fields of [main, fan]) {
+          if (fields.color !== undefined) fields.color = convert.toHue(fields.color, gen);
+          if (fields.colorOff !== undefined) fields.colorOff = convert.toHue(fields.colorOff, gen);
           if (fields.brightnessOn !== undefined) fields.brightnessOn = convert.toLevel(fields.brightnessOn, device.levelMax);
           if (fields.brightnessOff !== undefined) fields.brightnessOff = convert.toLevel(fields.brightnessOff, device.levelMax);
         }
@@ -71,7 +54,7 @@ module.exports = function (RED) {
         if (integration === "matter") {
           if (hasMain) {
             msgs = encoders.matter.ledBar(resolved, {
-              rawColor: main.color,
+              rawColor: main.color !== undefined ? numeric(p.color !== undefined ? p.color : config.color) : undefined,
               brightnessOn: main.brightnessOn,
               brightnessOff: main.brightnessOff,
             }, {

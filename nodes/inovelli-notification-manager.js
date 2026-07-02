@@ -1,6 +1,7 @@
 module.exports = function (RED) {
   const devices = require("./lib/devices");
   const convert = require("./lib/convert");
+  const { numeric, entityList } = require("./lib/util");
   const encoders = {
     zwave_js: require("./lib/encoders/zwavejs"),
     zigbee2mqtt: require("./lib/encoders/zigbee2mqtt"),
@@ -13,12 +14,6 @@ module.exports = function (RED) {
     if (payload[key] !== undefined) return payload[key];
     if (aliasKey && payload[aliasKey] !== undefined) return payload[aliasKey];
     return cfgValue;
-  }
-  function numeric(v) {
-    return typeof v === "string" && /^\d+$/.test(v.trim()) ? parseInt(v, 10) : v;
-  }
-  function entityList(v) {
-    return String(v).split(",").map((s) => s.trim()).filter(Boolean);
   }
 
   function InovelliNotificationManager(config) {
