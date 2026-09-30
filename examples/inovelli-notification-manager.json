@@ -1,0 +1,6 @@
+[
+  {"id":"tab-notification","type":"tab","label":"Inovelli notification","disabled":false,"info":""},
+  {"id":"inject-notification","type":"inject","z":"tab-notification","name":"Notify red","props":[{"p":"payload"}],"payload":"{\"color\":\"#ff0000\",\"duration\":\"2 minutes\",\"effect\":\"pulse\"}","payloadType":"json","x":160,"y":120,"wires":[["notification-manager"]]},
+  {"id":"notification-manager","type":"inovelli-notification-manager","z":"tab-notification","name":"Notify Inovelli","zwave":"zwave_js","entity_id":"light.inovelli","node_id":"","switchtype":"lzw31-sn","color":"0","brightness":"10","duration":"5 seconds","effect":"solid","clear":false,"multicast":false,"x":390,"y":120,"wires":[["ha-notification"]]},
+  {"id":"ha-notification","type":"api-call-service","z":"tab-notification","name":"Home Assistant service call","server":"","version":7,"debugenabled":false,"action":"","floorId":[],"areaId":[],"deviceId":[],"entityId":[],"labelId":[],"data":"{}","dataType":"json","queue":"none","x":660,"y":120,"wires":[[]]}
+]

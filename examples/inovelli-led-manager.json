@@ -1,0 +1,6 @@
+[
+  {"id":"tab-led","type":"tab","label":"Inovelli LED","disabled":false,"info":""},
+  {"id":"inject-led","type":"inject","z":"tab-led","name":"Set LED","props":[{"p":"payload"}],"payload":"{\"color\":120,\"brightness\":8,\"brightnessOff\":1}","payloadType":"json","x":150,"y":120,"wires":[["led-manager"]]},
+  {"id":"led-manager","type":"inovelli-led-manager","z":"tab-led","name":"Set Inovelli LED","zwave":"zwave_js","entity_id":"light.inovelli","node_id":"","switchtype":"lzw31-sn","color":"0","brightness":"10","brightnessOff":"1","fanColor":"0","fanBrightness":"10","fanBrightnessOff":"1","multicast":false,"x":390,"y":120,"wires":[["ha-led"]]},
+  {"id":"ha-led","type":"api-call-service","z":"tab-led","name":"Home Assistant service call","server":"","version":7,"debugenabled":false,"action":"","data":"{}","dataType":"json","queue":"none","x":660,"y":120,"wires":[[]]}
+]

@@ -1,0 +1,16 @@
+<script type="text/javascript">
+RED.nodes.registerType('inovelli-led-manager', {
+  category: 'home assistant', color: '#c6dbef', defaults: { name: { value: '' }, zwave: { value: 'zwave_js' }, entity_id: { value: '' }, node_id: { value: '' }, switchtype: { value: 'lzw31-sn' }, color: { value: '0' }, brightness: { value: '10' }, brightnessOff: { value: '1' }, fanColor: { value: '0' }, fanBrightness: { value: '10' }, fanBrightnessOff: { value: '1' }, multicast: { value: false } },
+  inputs: 1, outputs: 1, icon: 'font-awesome/fa-lightbulb-o', label: function () { return this.name || 'Inovelli LED'; }, paletteLabel: 'Inovelli LED', oneditprepare: function () { $('#node-input-multicast').prop('checked', !!this.multicast); }
+});
+</script>
+<script type="text/html" data-template-name="inovelli-led-manager">
+<div class="form-row"><label for="node-input-name">Name</label><input type="text" id="node-input-name"></div>
+<div class="form-row"><label for="node-input-zwave">Integration</label><select id="node-input-zwave"><option value="zwave_js">Z-Wave JS</option><option value="ozw">OpenZWave</option><option value="zwave">Z-Wave (deprecated)</option></select></div>
+<div class="form-row"><label for="node-input-entity_id">Entity IDs</label><input type="text" id="node-input-entity_id"></div><div class="form-row"><label for="node-input-node_id">Node IDs</label><input type="text" id="node-input-node_id"></div>
+<div class="form-row"><label for="node-input-switchtype">Switch type</label><input type="text" id="node-input-switchtype" placeholder="lzw31-sn"></div>
+<div class="form-row"><label for="node-input-color">LED color (hue 0–361)</label><input type="text" id="node-input-color"></div><div class="form-row"><label for="node-input-brightness">LED brightness on (0–10)</label><input type="number" id="node-input-brightness" min="0" max="10"></div><div class="form-row"><label for="node-input-brightnessOff">LED brightness off (0–10)</label><input type="number" id="node-input-brightnessOff" min="0" max="10"></div>
+<div class="form-row"><label for="node-input-fanColor">Fan color (hue 0–361)</label><input type="text" id="node-input-fanColor"></div><div class="form-row"><label for="node-input-fanBrightness">Fan brightness on (0–10)</label><input type="number" id="node-input-fanBrightness" min="0" max="10"></div><div class="form-row"><label for="node-input-fanBrightnessOff">Fan brightness off (0–10)</label><input type="number" id="node-input-fanBrightnessOff" min="0" max="10"></div>
+<div class="form-row"><label for="node-input-multicast">Use Z-Wave JS multicast</label><input type="checkbox" id="node-input-multicast" style="width:auto"></div>
+</script>
+<script type="text/html" data-help-name="inovelli-led-manager"><p>Creates Home Assistant service-call messages for LED and, on LZW36, fan LED parameters. One output message is emitted per parameter.</p><p>Payload overrides: <code>zwave</code>, <code>entity_id</code>, <code>node_id</code>, <code>switchtype</code>, <code>color</code>, <code>brightness</code>, <code>brightnessOff</code>, <code>fanColor</code>, <code>fanBrightness</code>, <code>fanBrightnessOff</code>, and <code>multicast</code>. Color accepts hue, RGB array, CSS name, or hex. Brightness range is 0–10. Z-Wave JS uses entity IDs; OpenZWave and legacy Z-Wave use node IDs.</p></script>

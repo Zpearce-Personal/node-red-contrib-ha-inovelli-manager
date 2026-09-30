@@ -1,0 +1,20 @@
+[
+  {"id":"tab-scene","type":"tab","label":"Inovelli scenes","disabled":false,"info":""},
+  {"id":"events-all","type":"server-events","z":"tab-scene","name":"Home Assistant events-all","server":"","version":3,"exposeAsEntityConfig":"","eventType":"zwave_js_value_notification","eventData":"","waitForRunning":true,"outputProperties":[{"property":"payload","propertyType":"msg","value":"","valueType":"eventData"}],"x":170,"y":160,"wires":[["scene-manager"]]},
+  {"id":"scene-manager","type":"inovelli-scene-manager","z":"tab-scene","name":"Inovelli scenes","zwave":"zwave_js","node_id":"12","switchtype":"lzw31-sn","passthrough":true,"outputs":15,"x":410,"y":160,"wires":[["action-up1"],["action-up2"],["action-up3"],["action-up4"],["action-up5"],["action-uphold"],["action-uprelease"],["action-down1"],["action-down2"],["action-down3"],["action-down4"],["action-down5"],["action-downhold"],["action-downrelease"],["action-config1"]]},
+  {"id":"action-up1","type":"debug","z":"tab-scene","name":"Up 1x","active":true,"tosidebar":true,"complete":"true","x":650,"y":40,"wires":[]},
+  {"id":"action-up2","type":"debug","z":"tab-scene","name":"Up 2x","active":true,"tosidebar":true,"complete":"true","x":650,"y":80,"wires":[]},
+  {"id":"action-up3","type":"debug","z":"tab-scene","name":"Up 3x","active":true,"tosidebar":true,"complete":"true","x":650,"y":120,"wires":[]},
+  {"id":"action-up4","type":"debug","z":"tab-scene","name":"Up 4x","active":true,"tosidebar":true,"complete":"true","x":650,"y":160,"wires":[]},
+  {"id":"action-up5","type":"debug","z":"tab-scene","name":"Up 5x","active":true,"tosidebar":true,"complete":"true","x":650,"y":200,"wires":[]},
+  {"id":"action-uphold","type":"debug","z":"tab-scene","name":"Hold Up","active":true,"tosidebar":true,"complete":"true","x":650,"y":240,"wires":[]},
+  {"id":"action-uprelease","type":"debug","z":"tab-scene","name":"Release Up","active":true,"tosidebar":true,"complete":"true","x":650,"y":280,"wires":[]},
+  {"id":"action-down1","type":"debug","z":"tab-scene","name":"Down 1x","active":true,"tosidebar":true,"complete":"true","x":650,"y":320,"wires":[]},
+  {"id":"action-down2","type":"debug","z":"tab-scene","name":"Down 2x","active":true,"tosidebar":true,"complete":"true","x":650,"y":360,"wires":[]},
+  {"id":"action-down3","type":"debug","z":"tab-scene","name":"Down 3x","active":true,"tosidebar":true,"complete":"true","x":650,"y":400,"wires":[]},
+  {"id":"action-down4","type":"debug","z":"tab-scene","name":"Down 4x","active":true,"tosidebar":true,"complete":"true","x":650,"y":440,"wires":[]},
+  {"id":"action-down5","type":"debug","z":"tab-scene","name":"Down 5x","active":true,"tosidebar":true,"complete":"true","x":650,"y":480,"wires":[]},
+  {"id":"action-downhold","type":"debug","z":"tab-scene","name":"Hold Down","active":true,"tosidebar":true,"complete":"true","x":650,"y":520,"wires":[]},
+  {"id":"action-downrelease","type":"debug","z":"tab-scene","name":"Release Down","active":true,"tosidebar":true,"complete":"true","x":650,"y":560,"wires":[]},
+  {"id":"action-config1","type":"debug","z":"tab-scene","name":"Config 1x","active":true,"tosidebar":true,"complete":"true","x":650,"y":600,"wires":[]}
+]

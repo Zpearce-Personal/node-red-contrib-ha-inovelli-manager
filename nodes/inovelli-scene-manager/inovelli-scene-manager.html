@@ -1,0 +1,20 @@
+<script type="text/javascript">
+const inovelliSceneMaps = {
+  'lzw30-sn': ['Up 1x','Up 2x','Up 3x','Up 4x','Up 5x','Down 1x','Down 2x','Down 3x','Down 4x','Down 5x','Config 1x','Config 2x','Config 3x'],
+  'lzw31-sn': ['Up 1x','Up 2x','Up 3x','Up 4x','Up 5x','Hold Up','Release Up','Down 1x','Down 2x','Down 3x','Down 4x','Down 5x','Hold Down','Release Down','Config 1x'],
+  'lzw36': ['Light Up 1x','Light Up 2x','Light Up 3x','Light Up 4x','Light Up 5x','Light Down 1x','Light Down 2x','Light Down 3x','Light Down 4x','Light Down 5x','Fan Up 1x','Fan Up 2x','Fan Up 3x','Fan Down 1x','Fan Down 2x','Fan Down 3x'],
+  'lzw45': ['Up 1x','Up 2x','Up 3x','Up 4x','Up 5x','Down 1x','Down 2x','Down 3x','Down 4x','Down 5x','Config 1x','Config 2x','Config 3x']
+};
+RED.nodes.registerType('inovelli-scene-manager', {
+  category: 'home assistant', color: '#c6dbef', defaults: { name: { value: '' }, zwave: { value: 'zwave_js' }, node_id: { value: '' }, switchtype: { value: 'lzw31-sn' }, passthrough: { value: false }, outputs: { value: 15 } }, inputs: 1, outputs: function () { return this.outputs || 15; }, icon: 'font-awesome/fa-random', label: function () { return this.name || 'Inovelli Scene'; }, paletteLabel: 'Inovelli scene',
+  outputLabels: function (index) { const labels = inovelliSceneMaps[String(this.switchtype || '').toLowerCase()] || inovelliSceneMaps['lzw31-sn']; return labels[index] || 'Scene ' + (index + 1); },
+  oneditprepare: function () { const node = this; const update = function () { const key = String($('#node-input-switchtype').val() || '').toLowerCase(); const outputs = (inovelliSceneMaps[key] || inovelliSceneMaps['lzw31-sn']).length; $('#node-input-outputs').val(outputs); $('#node-input-outputs-count').text(outputs + ' scene outputs'); }; $('#node-input-switchtype').on('change', update); update(); },
+  oneditsave: function () { this.outputs = Number($('#node-input-outputs').val()); }, oneditresize: function () {}
+});
+</script>
+<script type="text/html" data-template-name="inovelli-scene-manager">
+<div class="form-row"><label for="node-input-name">Name</label><input type="text" id="node-input-name"></div><div class="form-row"><label for="node-input-zwave">Integration</label><select id="node-input-zwave"><option value="zwave_js">Z-Wave JS</option><option value="ozw">OpenZWave</option></select></div>
+<div class="form-row"><label for="node-input-node_id">Node ID</label><input type="text" id="node-input-node_id"></div><div class="form-row"><label for="node-input-switchtype">Switch type</label><select id="node-input-switchtype"><option value="lzw30-sn">LZW30-SN</option><option value="lzw31-sn">LZW31-SN</option><option value="lzw36">LZW36</option><option value="lzw45">LZW45</option></select></div>
+<div class="form-row"><label for="node-input-passthrough">Node ID passthrough</label><input type="checkbox" id="node-input-passthrough" style="width:auto"></div><div class="form-row"><label>Outputs</label><span id="node-input-outputs-count"></span><input type="hidden" id="node-input-outputs"></div>
+</script>
+<script type="text/html" data-help-name="inovelli-scene-manager"><p>Connect a Home Assistant events-all node. Recognized Z-Wave JS and OpenZWave scene events are routed to the selected model's corresponding output. Each output represents a click action. Optional node ID passthrough adds <code>msg.node_id</code>.</p><p>Configure integration, the switch node ID, and LZW30-SN, LZW31-SN, LZW36, or LZW45 switch type. Only events for the configured node ID are passed.</p></script>

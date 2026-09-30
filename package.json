@@ -1,0 +1,20 @@
+{
+  "name": "node-red-contrib-ha-inovelli-manager",
+  "version": "1.0.0",
+  "description": "Node-RED message transformers for Inovelli switches and Home Assistant",
+  "main": "nodes/inovelli-notification-manager/inovelli-notification-manager.js",
+  "files": ["nodes/", "README.md", "LICENSE", "examples/"],
+  "keywords": ["node-red", "inovelli", "home-assistant", "zwave"],
+  "license": "MIT",
+  "engines": { "node": ">=14" },
+  "dependencies": { "color-convert": "^2.0.1" },
+  "devDependencies": { "node-red-node-test-helper": "^0.3.4" },
+  "scripts": { "test": "node test/inovelli-manager_spec.js" },
+  "node-red": {
+    "nodes": {
+      "inovelli-notification-manager": "nodes/inovelli-notification-manager/inovelli-notification-manager.js",
+      "inovelli-led-manager": "nodes/inovelli-led-manager/inovelli-led-manager.js",
+      "inovelli-scene-manager": "nodes/inovelli-scene-manager/inovelli-scene-manager.js"
+    }
+  }
+}
