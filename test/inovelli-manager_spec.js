@@ -11,7 +11,7 @@ const scene = path.join(__dirname, '../nodes/inovelli-scene-manager/inovelli-sce
 helper.init(require.resolve('node-red'));
 
 function load(file, flow) {
-  return new Promise((resolve, reject) => helper.load(file, flow, error => error ? reject(error) : resolve()));
+  return new Promise((resolve, reject) => helper.load(require(file), flow, error => error ? reject(error) : resolve()));
 }
 function unload() { return new Promise(resolve => helper.unload().then(resolve)); }
 
