@@ -37,6 +37,10 @@ module.exports = function (RED) {
   function SceneManager(config) {
     RED.nodes.createNode(this, config);
     const node = this;
+    node.outputs = Number(config.outputs) || (function () {
+      try { return utils.resolveSwitchType(config.switchtype || 'lzw31-sn').scene.length; }
+      catch (error) { return 1; }
+    })();
     node.on('input', function (msg) {
       const integration = config.zwave || 'zwave_js';
       const expected = String(config.node_id || '').trim();
