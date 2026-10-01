@@ -1,234 +1,108 @@
 <script type="text/javascript">
-  RED.nodes.registerType("inovelli-led-manager", {
-    category: "inovelli",
-    color: "#B68181",
-    defaults: {
-      name: { value: "" },
-      zwave: { value: "zwave_js" },
-      nodeid: { value: "" },
-      entityid: { value: "" },
-      switchtype: { value: 5 },
-      color: { value: 180 },
-      brightness: { value: 5 },
-      brightnessOff: { value: 1 },
-      fanColor: { value: 180 },
-      fanBrightness: { value: 5 },
-      fanBrightnessOff: { value: 1 },
-      toggleColor: { value: true },
-      toggleBrightness: { value: true },
-      toggleBrightnessOff: { value: true },
-      toggleFanColor: { value: false },
-      toggleFanBrightness: { value: false },
-      toggleFanBrightnessOff: { value: false },
-      multicast: { value: false },
-    },
-    inputs: 1,
-    outputs: 1,
-    outputLabels: "Connect to a call-service node",
-    icon: "light.svg",
-    align: "right",
-    label: function () {
-      return this.name || "inovelli-led-manager";
-    },
-    oneditprepare: function () {
-      $("#node-input-zwave").change(function () {
-        let zwave = $("#node-input-zwave").val();
-        switch (zwave) {
-          case "zwave_js":
-            $(".nodeid-input").hide();
-            $(".entityid-input").show();
-            $(".multicast-input").show();
-            break;
-          default:
-            $(".nodeid-input").show();
-            $(".entityid-input").hide();
-            $(".multicast-input").hide();
-            break;
-        }
-      });
-      $("#node-input-switchtype").change(function () {
-        let switchInput = $("#node-input-switchtype").val();
-        switch (switchInput) {
-          case "38":
-            toggleColorCSS();
-            toggleBrightnessCSS();
-            toggleBrightnessOffCSS();
-            toggleFanColorCSS();
-            toggleFanBrightnessCSS();
-            toggleFanBrightnessOffCSS();
-            break;
-          case "20":
-            $(".color-input").hide();
-            $(".toggle-color").hide();
-            $(".brightness-input").hide();
-            $(".toggle-brightness").hide();
-            $(".brightness-off-input").hide();
-            $(".toggle-brightness-off").hide();
-            toggleFanColorCSS();
-            toggleFanBrightnessCSS();
-            toggleFanBrightnessOffCSS();
-            break;
-          default:
-            toggleColorCSS();
-            toggleBrightnessCSS();
-            toggleBrightnessOffCSS();
-            $(".fan-color-input").hide();
-            $(".toggle-fan-color").hide();
-            $(".fan-brightness-input").hide();
-            $(".toggle-fan-brightness").hide();
-            $(".fan-brightness-off-input").hide();
-            $(".toggle-fan-brightness-off").hide();
-            break;
-        }
-      });
+  (function () {
+    // Kept in sync with nodes/lib/devices.js — editor cannot require() it.
+    const MODELS = {
+      zwave_js: [
+        ["vzw31-sn", "VZW31-SN 2-1 (Red)"], ["vzw32-sn", "VZW32-SN mmWave 2-1 (Red)"],
+        ["lzw30-sn", "LZW30-SN On/Off (Red)"], ["lzw31-sn", "LZW31-SN Dimmer (Red)"],
+        ["lzw36", "LZW36 Fan + Light (Red)"],
+      ],
+      zigbee2mqtt: [
+        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave 2-1 (Blue)"],
+        ["vzm35-sn", "VZM35-SN Fan Switch (Blue)"], ["vzm36", "VZM36 Fan + Light Canopy (Blue)"],
+      ],
+      zha: [
+        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave 2-1 (Blue)"],
+        ["vzm35-sn", "VZM35-SN Fan Switch (Blue)"], ["vzm36", "VZM36 Fan + Light Canopy (Blue)"],
+      ],
+      matter: [
+        ["vtm31-sn", "VTM31-SN 2-1 (White)"], ["vtm35-sn", "VTM35-SN Fan Switch (White)"],
+      ],
+    };
 
-      function toggleColorCSS () {
-        $(".toggle-color").show();
-        if ($('#node-input-toggleColor').is(":checked")) {
-          $(".color-input").show();
-        } else {
-          $(".color-input").hide();
-        }
-      };
-      function toggleBrightnessCSS () {
-        $(".toggle-brightness").show();
-        if ($('#node-input-toggleBrightness').is(":checked")) {
-          $(".brightness-input").show();
-        } else {
-          $(".brightness-input").hide();
-        }
-      };
-      function toggleBrightnessOffCSS () {
-        $(".toggle-brightness-off").show();
-        if ($('#node-input-toggleBrightnessOff').is(":checked")) {
-          $(".brightness-off-input").show();
-        } else {
-          $(".brightness-off-input").hide();
-        }
-      };
-      function toggleFanColorCSS () {
-        $(".toggle-fan-color").show();
-        if ($('#node-input-toggleFanColor').is(":checked")) {
-          $(".fan-color-input").show();
-        } else {
-          $(".fan-color-input").hide();
-        }
-      };
-      function toggleFanBrightnessCSS () {
-        $(".toggle-fan-brightness").show();
-        if ($('#node-input-toggleFanBrightness').is(":checked")) {
-          $(".fan-brightness-input").show();
-        } else {
-          $(".fan-brightness-input").hide();
-        }
-      };
-      function toggleFanBrightnessOffCSS () {
-        $(".toggle-fan-brightness-off").show();
-        if ($('#node-input-toggleFanBrightnessOff').is(":checked")) {
-          $(".fan-brightness-off-input").show();
-        } else {
-          $(".fan-brightness-off-input").hide();
-        }
-      };
+    RED.nodes.registerType("inovelli-led-manager", {
+      category: "inovelli",
+      color: "#B68181",
+      defaults: {
+        name: { value: "" },
+        integration: { value: "zwave_js" },
+        model: { value: "vzw31-sn" },
+        entityid: { value: "" },
+        basetopic: { value: "zigbee2mqtt" },
+        devicename: { value: "" },
+        ieee: { value: "" },
+        mattercolor: { value: "" },
+        matterintensityon: { value: "" },
+        matterintensityoff: { value: "" },
+        color: { value: 170 },
+        colorOff: { value: 170 },
+        brightness: { value: 33 },
+        brightnessOff: { value: 1 },
+        fanColor: { value: 170 },
+        fanBrightness: { value: 33 },
+        fanBrightnessOff: { value: 1 },
+        toggleColor: { value: false },
+        toggleColorOff: { value: false },
+        toggleBrightness: { value: false },
+        toggleBrightnessOff: { value: false },
+        toggleFanColor: { value: false },
+        toggleFanBrightness: { value: false },
+        toggleFanBrightnessOff: { value: false },
+      },
+      inputs: 1,
+      outputs: 1,
+      outputLabels: "Connect to a Home Assistant action node",
+      icon: "light.svg",
+      align: "right",
+      label: function () { return this.name || "inovelli-led-manager"; },
+      oneditprepare: function () {
+        const self = this;
 
-      $("#node-input-toggleColor").change(function () {
-        if ($('#node-input-toggleColor').is(":checked")) {
-          $(".color-input").show();
-        } else {
-          $(".color-input").hide();
+        function refreshModels() {
+          const integration = $("#node-input-integration").val();
+          const $model = $("#node-input-model").empty();
+          MODELS[integration].forEach(([id, label]) => $model.append(new Option(label, id)));
+          $model.val(MODELS[integration].some(([id]) => id === self.model) ? self.model : MODELS[integration][0][0]);
+          refreshVisibility();
+          refreshRows();
         }
-      });
-      $("#node-input-toggleBrightness").change(function () {
-        if ($('#node-input-toggleBrightness').is(":checked")) {
-          $(".brightness-input").show();
-        } else {
-          $(".brightness-input").hide();
+        function refreshVisibility() {
+          const integration = $("#node-input-integration").val();
+          $(".row-zwave").toggle(integration === "zwave_js");
+          $(".row-z2m").toggle(integration === "zigbee2mqtt");
+          $(".row-zha").toggle(integration === "zha");
+          $(".row-matter").toggle(integration === "matter");
         }
-      });
-      $("#node-input-toggleBrightnessOff").change(function () {
-        if ($('#node-input-toggleBrightnessOff').is(":checked")) {
-          $(".brightness-off-input").show();
-        } else {
-          $(".brightness-off-input").hide();
+        function refreshRows() {
+          const model = $("#node-input-model").val() || "";
+          $(".row-coloroff").toggle(model.startsWith("vzw") || model.startsWith("vzm"));
+          $(".row-fan").toggle(model === "lzw36" || model === "vzm36");
+          // Color rows stay visible for every integration (matter snaps the color).
+          const max = model.startsWith("lzw") ? 10 : 100;
+          $(".level-slider").attr("max", max);
         }
-      });
-      $("#node-input-toggleFanColor").change(function () {
-        if ($('#node-input-toggleFanColor').is(":checked")) {
-          $(".fan-color-input").show();
-        } else {
-          $(".fan-color-input").hide();
+        function bindOutput(inputId, outputId) {
+          $("#" + inputId).on("input change", function () { $("#" + outputId).text(this.value); });
         }
-      });
-      $("#node-input-toggleFanBrightness").change(function () {
-        if ($('#node-input-toggleFanBrightness').is(":checked")) {
-          $(".fan-brightness-input").show();
-        } else {
-          $(".fan-brightness-input").hide();
-        }
-      });
-      $("#node-input-toggleFanBrightnessOff").change(function () {
-        if ($('#node-input-toggleFanBrightnessOff').is(":checked")) {
-          $(".fan-brightness-off-input").show();
-        } else {
-          $(".fan-brightness-off-input").hide();
-        }
-      });
-      $("#node-input-color").change(function () {
-        let color = document.getElementById("node-input-color");
-        let colorOutput = document.getElementById("colorOutput");
-        colorOutput.innerHTML = color.value;
-        color.oninput = function () {
-          colorOutput.innerHTML = this.value;
-        };
-      });
-      $("#node-input-fanColor").change(function () {
-        let color = document.getElementById("node-input-fanColor");
-        let colorOutput = document.getElementById("fanColorOutput");
-        colorOutput.innerHTML = color.value;
-        color.oninput = function () {
-          colorOutput.innerHTML = this.value;
-        };
-      });
-      $("#node-input-brightness").change(function () {
-        let brightness = document.getElementById("node-input-brightness");
-        let brightnessOutput = document.getElementById("brightnessOutput");
-        brightnessOutput.innerHTML = brightness.value;
-        brightness.oninput = function () {
-          brightnessOutput.innerHTML = this.value;
-        };
-      });
-      $("#node-input-fanBrightness").change(function () {
-        let brightness = document.getElementById("node-input-fanBrightness");
-        let brightnessOutput = document.getElementById("fanBrightnessOutput");
-        brightnessOutput.innerHTML = brightness.value;
-        brightness.oninput = function () {
-          brightnessOutput.innerHTML = this.value;
-        };
-      });
-      $("#node-input-brightnessOff").change(function () {
-        let brightness = document.getElementById(
-          "node-input-brightnessOff"
-        );
-        let brightnessOutput = document.getElementById(
-          "brightnessOffOutput"
-        );
-        brightnessOutput.innerHTML = brightness.value;
-        brightness.oninput = function () {
-          brightnessOutput.innerHTML = this.value;
-        };
-      });
-      $("#node-input-fanBrightnessOff").change(function () {
-        let brightness = document.getElementById("node-input-fanBrightnessOff");
-        let brightnessOutput = document.getElementById(
-          "fanBrightnessOffOutput"
-        );
-        brightnessOutput.innerHTML = brightness.value;
-        brightness.oninput = function () {
-          brightnessOutput.innerHTML = this.value;
-        };
-      });
-    },
-  });
+
+        $("#node-input-integration").on("change", refreshModels);
+        $("#node-input-model").on("change", refreshRows);
+        bindOutput("node-input-color", "colorOutput");
+        bindOutput("node-input-colorOff", "colorOffOutput");
+        bindOutput("node-input-brightness", "brightnessOutput");
+        bindOutput("node-input-brightnessOff", "brightnessOffOutput");
+        bindOutput("node-input-fanColor", "fanColorOutput");
+        bindOutput("node-input-fanBrightness", "fanBrightnessOutput");
+        bindOutput("node-input-fanBrightnessOff", "fanBrightnessOffOutput");
+        refreshModels();
+
+        // Slider <output> spans are blank until first drag — seed them from the
+        // inputs' current (config-loaded) values.
+        ["color", "colorOff", "brightness", "brightnessOff", "fanColor", "fanBrightness", "fanBrightnessOff"]
+          .forEach(function (id) { $("#" + id + "Output").text($("#node-input-" + id).val()); });
+      },
+    });
+  })();
 </script>
 
 <script type="text/x-red" data-template-name="inovelli-led-manager">
@@ -246,13 +120,6 @@
       width: 100% !important;
     }
     .color-picker-input {
-      display: inline-block;
-      width: 70%;
-    }
-    .fan-color-input input {
-      width: 100% !important;
-    }
-    .fan-color-picker-input {
       display: inline-block;
       width: 70%;
     }
@@ -277,31 +144,7 @@
       background: linear-gradient(to right, rgb(0,0,0), rgb(255,255,255));
       outline: none;
     }
-    .brightness-input input {
-      width: 100% !important;
-    }
     .brightness-picker-input {
-      display: inline-block;
-      width: 70%;
-    }
-    .fan-brightness-input input {
-      width: 100% !important;
-    }
-    .fan-brightness-picker-input {
-      display: inline-block;
-      width: 70%;
-    }
-    .brightness-off-input input {
-      width: 100% !important;
-    }
-    .brightness-off-picker-input {
-      display: inline-block;
-      width: 70%;
-    }
-    .fan-brightness-off-input input {
-      width: 100% !important;
-    }
-    .fan-brightness-off-picker-input {
       display: inline-block;
       width: 70%;
     }
@@ -323,174 +166,181 @@
       <input type="text" id="node-input-name" placeholder="Name">
   </div>
   <div class="form-row">
-    <label for="node-input-zwave"><i class="icon-tag"></i>Z-Wave Integration</label>
-    <select name="node-input-zwave" id="node-input-zwave">
+    <label for="node-input-integration"><i class="icon-tag"></i>Integration</label>
+    <select name="node-input-integration" id="node-input-integration">
         <option value="zwave_js">Z-Wave JS</option>
-        <option value="ozw">OpenZWave (1.6)</option>
-        <option value="zwave">Z-Wave (Deprecated)</option>
+        <option value="zigbee2mqtt">Zigbee2MQTT</option>
+        <option value="zha">ZHA</option>
+        <option value="matter">Matter</option>
     </select>
   </div>
-  <div class="form-row nodeid-input">
-    <label for="node-input-nodeid"><i class="icon-tag"></i>Node ID(s)</label>
-    <input type="text" id="node-input-nodeid">
+  <div class="form-row">
+    <label for="node-input-model"><i class="icon-tag"></i>Model</label>
+    <select name="node-input-model" id="node-input-model">
+    </select>
   </div>
-  <div class="form-row entityid-input">
+  <div class="form-row row-zwave">
     <label for="node-input-entityid"><i class="icon-tag"></i>Entity ID(s)</label>
     <input type="text" id="node-input-entityid">
   </div>
-  <div class="form-row">
-    <label for="node-input-switchtype"><i class="icon-tag"></i>Switch Type</label>
-    <select name="node-input-switchtype" id="node-input-switchtype">
-        <option value="5">On/Off (LZW30-SN)</option>
-        <option value="13">Dimmer (LZW31-SN)</option>
-        <option value="18">Light Dimmer (LZW36)</option>
-        <option value="20">Fan Dimmer (LZW36)</option>
-        <option value="38">Fan & Light (LZW36)</option>
-    </select>
+  <div class="form-row row-z2m">
+    <label for="node-input-basetopic"><i class="icon-tag"></i>Base Topic</label>
+    <input type="text" id="node-input-basetopic">
+  </div>
+  <div class="form-row row-z2m">
+    <label for="node-input-devicename"><i class="icon-tag"></i>Device Name</label>
+    <input type="text" id="node-input-devicename">
+  </div>
+  <div class="form-row row-zha">
+    <label for="node-input-ieee"><i class="icon-tag"></i>IEEE Address</label>
+    <input type="text" id="node-input-ieee">
+  </div>
+  <div class="form-row row-matter">
+    <label for="node-input-mattercolor"><i class="icon-tag"></i>LED Color Select Entity</label>
+    <input type="text" id="node-input-mattercolor">
+  </div>
+  <div class="form-row row-matter">
+    <label for="node-input-matterintensityon"><i class="icon-tag"></i>LED Intensity (On) Number Entity</label>
+    <input type="text" id="node-input-matterintensityon">
+  </div>
+  <div class="form-row row-matter">
+    <label for="node-input-matterintensityoff"><i class="icon-tag"></i>LED Intensity (Off) Number Entity</label>
+    <input type="text" id="node-input-matterintensityoff">
   </div>
   <div class="form-row color-input">
-    <label for="node-input-color"><i class="icon-tag"></i>Color</label>
+    <label for="node-input-toggleColor"><i class="icon-tag"></i>Color When On</label>
+    <input type="checkbox" id="node-input-toggleColor">
     <div class="color-picker-input">
-      <input type="range" id="node-input-color" min="0" max="361" class="color-picker" oninput="Hue.value = this.value">
+      <input type="range" id="node-input-color" min="0" max="361" class="color-picker">
     </div>
     <output id="colorOutput"></output>
   </div>
-  <div class="form-row brightness-input">
-    <label for="node-input-brightness"><i class="icon-tag"></i>Brightness Level</label>
+  <div class="form-row color-input row-coloroff">
+    <label for="node-input-toggleColorOff"><i class="icon-tag"></i>Color When Off</label>
+    <input type="checkbox" id="node-input-toggleColorOff">
+    <div class="color-picker-input">
+      <input type="range" id="node-input-colorOff" min="0" max="361" class="color-picker">
+    </div>
+    <output id="colorOffOutput"></output>
+  </div>
+  <div class="form-row">
+    <label for="node-input-toggleBrightness"><i class="icon-tag"></i>Brightness When On</label>
+    <input type="checkbox" id="node-input-toggleBrightness">
     <div class="brightness-picker-input">
-      <input type="range" id="node-input-brightness" min="0" max="10" class="brightness-picker" oninput="brightness.value = this.value">
+      <input type="range" id="node-input-brightness" min="0" max="100" class="brightness-picker level-slider">
     </div>
     <output id="brightnessOutput"></output>
   </div>
-  <div class="form-row brightness-off-input">
-    <label for="node-input-brightnessOff"><i class="icon-tag"></i>Brightness Level (Off)</label>
-    <div class="brightness-off-picker-input">
-      <input type="range" id="node-input-brightnessOff" min="0" max="10" class="brightness-picker" oninput="brightnessOff.value = this.value">
+  <div class="form-row">
+    <label for="node-input-toggleBrightnessOff"><i class="icon-tag"></i>Brightness When Off</label>
+    <input type="checkbox" id="node-input-toggleBrightnessOff">
+    <div class="brightness-picker-input">
+      <input type="range" id="node-input-brightnessOff" min="0" max="100" class="brightness-picker level-slider">
     </div>
     <output id="brightnessOffOutput"></output>
   </div>
-  <div class="form-row fan-color-input">
-    <label for="node-input-fanColor"><i class="icon-tag"></i>Color (Fan)</label>
-    <div class="fan-color-picker-input">
-      <input type="range" id="node-input-fanColor" min="0" max="361" class="color-picker" oninput="fanHue.value = this.value">
+  <div class="form-row color-input row-fan">
+    <label for="node-input-toggleFanColor"><i class="icon-tag"></i>Fan Color</label>
+    <input type="checkbox" id="node-input-toggleFanColor">
+    <div class="color-picker-input">
+      <input type="range" id="node-input-fanColor" min="0" max="361" class="color-picker">
     </div>
     <output id="fanColorOutput"></output>
   </div>
-  <div class="form-row fan-brightness-input">
-    <label for="node-input-fanBrightness"><i class="icon-tag"></i>Brightness Level (Fan)</label>
-    <div class="fan-brightness-picker-input">
-      <input type="range" id="node-input-fanBrightness" min="0" max="10" class="brightness-picker" oninput="fanBrightness.value = this.value">
+  <div class="form-row row-fan">
+    <label for="node-input-toggleFanBrightness"><i class="icon-tag"></i>Fan Brightness When On</label>
+    <input type="checkbox" id="node-input-toggleFanBrightness">
+    <div class="brightness-picker-input">
+      <input type="range" id="node-input-fanBrightness" min="0" max="100" class="brightness-picker level-slider">
     </div>
     <output id="fanBrightnessOutput"></output>
   </div>
-  <div class="form-row fan-brightness-off-input">
-    <label for="node-input-fanBrightnessOff"><i class="icon-tag"></i>Brightness Level (Fan) (Off)</label>
-    <div class="fan-brightness-off-picker-input">
-      <input type="range" id="node-input-fanBrightnessOff" min="0" max="10" class="brightness-picker" oninput="fanBrightnessOff.value = this.value">
+  <div class="form-row row-fan">
+    <label for="node-input-toggleFanBrightnessOff"><i class="icon-tag"></i>Fan Brightness When Off</label>
+    <input type="checkbox" id="node-input-toggleFanBrightnessOff">
+    <div class="brightness-picker-input">
+      <input type="range" id="node-input-fanBrightnessOff" min="0" max="100" class="brightness-picker level-slider">
     </div>
     <output id="fanBrightnessOffOutput"></output>
-  </div>
-  <div class="form-row toggle-color">
-    <label for="node-input-toggleColor"><i class="icon-tag"></i>Send Light Color?</label>
-    <input type="checkbox" id="node-input-toggleColor">
-  </div>
-  <div class="form-row toggle-brightness">
-    <label for="node-input-toggleBrightness"><i class="icon-tag"></i>Send Light Brightness?</label>
-    <input type="checkbox" id="node-input-toggleBrightness">
-  </div>
-  <div class="form-row toggle-brightness-off">
-    <label for="node-input-toggleBrightnessOff"><i class="icon-tag"></i>Send Light Brightness (When Off)?</label>
-    <input type="checkbox" id="node-input-toggleBrightnessOff">
-  </div>
-  <div class="form-row toggle-fan-color">
-    <label for="node-input-toggleFanColor"><i class="icon-tag"></i>Send Fan Color?</label>
-    <input type="checkbox" id="node-input-toggleFanColor">
-  </div>
-  <div class="form-row toggle-fan-brightness">
-    <label for="node-input-toggleFanBrightness"><i class="icon-tag"></i>Send Fan Brightness?</label>
-    <input type="checkbox" id="node-input-toggleFanBrightness">
-  </div>
-  <div class="form-row toggle-fan-brightness-off">
-    <label for="node-input-toggleFanBrightnessOff"><i class="icon-tag"></i>Send Fan Brightness (When Off)?</label>
-    <input type="checkbox" id="node-input-toggleFanBrightnessOff">
-  </div>
-  <div class="form-row multicast-input">
-    <label for="node-input-multicast"><i class="icon-tag"></i>Use Multicast</label>
-    <input type="checkbox" id="node-input-multicast">
   </div>
 </script>
 
 <script type="text/x-red" data-help-name="inovelli-led-manager">
-  <p>This node will help construct the value for controlling LED notifications on an Inovelli Red Series switch. The output should be connected to a Home Assistant call service node.</p>
-  <dl class="message-properties">
-      <dt>Z-Wave Integration<span class="property-type">string</span></dt>
-      <dd>Your Z-Wave integration used in Home Assistant (zwave_js, ozw, or zwave)</dd>
+    <p>This node constructs the message for configuring the persistent LED bar (color and brightness, on and off) of an Inovelli Red (Z-Wave), Blue (Zigbee), or White (Matter) series switch. The output should be connected directly to a Home Assistant action node (<code>msg.payload = { action, target?, data }</code>).</p>
+    <p>Each color/brightness field is only sent if its checkbox is checked <em>or</em> the matching key is present on <code>msg.payload</code> — leaving a field unchecked and absent from the payload leaves that setting untouched on the device. At least one field must be active or the node errors.</p>
+    <dl class="message-properties">
+        <dt>Integration<span class="property-type">string</span></dt>
+        <dd>Which Home Assistant integration controls the device: <code>zwave_js</code>, <code>zigbee2mqtt</code>, <code>zha</code>, or <code>matter</code>. Determines which of the fields below are shown/used.</dd>
 
-      <dt>Entity ID(s)<span class="property-type">string</span></dt>
-      <dd>(For Z-Wave JS) Entity (or a comma-delimited list of entity IDs) to set the configuration parameter on</dd>
+        <dt>Model<span class="property-type">string</span></dt>
+        <dd>The Inovelli switch model. The list is filtered to models supported by the selected Integration.</dd>
 
-      <dt>Node ID(s)<span class="property-type">number</span></dt>
-      <dd>(For OpenZWave or Z-Wave) Node ID (or a comma-delimited list of Node IDs) of the Inovelli switch you are trying to configure</dd>
+        <dt>Entity ID(s)<span class="property-type">string</span></dt>
+        <dd>(Z-Wave JS only) Entity ID, or a comma-delimited list of entity IDs, to target.</dd>
 
-      <dt>Switch Series<span class="property-type">string</span></dt>
-      <dd>The series of your Inovelli switch. (Black or Red))</dd>
+        <dt>Base Topic<span class="property-type">string</span></dt>
+        <dd>(Zigbee2MQTT only) The MQTT base topic configured for your Zigbee2MQTT bridge (default <code>zigbee2mqtt</code>).</dd>
 
-      <dt>Switch Type<span class="property-type">number|string</span></dt>
-      <dd>Determines which parameters to set. (On/Off, Dimmer, Fan/Light Dimmer)</dd>
+        <dt>Device Name<span class="property-type">string</span></dt>
+        <dd>(Zigbee2MQTT only) The friendly name of the device as known to Zigbee2MQTT.</dd>
 
-      <dt>Color<span class="property-type">number|string|array</span></dt>
-      <dd>Color you want to display (accepts color names, RGB arrays, hexadeciaml and 0-360* hue values) *361=white</dd>
+        <dt>IEEE Address<span class="property-type">string</span></dt>
+        <dd>(ZHA only) The IEEE address of the device to target.</dd>
 
-      <dt>Brightness Level (On)<span class="property-type">number</span></dt>
-      <dd>Brightness level of the LED light (0-10) when on</dd>
+        <dt>LED Color Select Entity<span class="property-type">string</span></dt>
+        <dd>(Matter only) The <code>select</code> entity used to choose the LED bar color.</dd>
 
-      <dt>Brightness Level (Off)<span class="property-type">number</span></dt>
-      <dd>Brightness level of the LED light (0-10) when off</dd>
+        <dt>LED Intensity (On) Number Entity<span class="property-type">string</span></dt>
+        <dd>(Matter only) The <code>number</code> entity used to set LED bar brightness when the load is on.</dd>
 
-      <dt>LZW36: Fan Color<span class="property-type">number|string|array</span></dt>
-      <dd>Color you want to display (accepts color names, RGB arrays, hexadeciaml and 0-360* hue values) *361=white</dd>
+        <dt>LED Intensity (Off) Number Entity<span class="property-type">string</span></dt>
+        <dd>(Matter only) The <code>number</code> entity used to set LED bar brightness when the load is off.</dd>
 
-      <dt>LZW36: Fan Brightness Level (On)<span class="property-type">number</span></dt>
-      <dd>Brightness level of the LED light (0-10) when on</dd>
+        <dt>Color When On<span class="property-type">number|string|array</span></dt>
+        <dd>LED bar color while the load is on (accepts color names, RGB arrays, hex, and 0-360&deg; hue values; 361=white).</dd>
 
-      <dt>LZW36: Fan Brightness Level (Off)<span class="property-type">number</span></dt>
-      <dd>Brightness level of the LED light (0-10) when off</dd>
+        <dt>Color When Off<span class="property-type">number|string|array</span></dt>
+        <dd>LED bar color while the load is off. Only shown for VZW/VZM models (legacy LZW switches share one color; Matter has no separate off color).</dd>
 
-      <dt>Send Light Color?<span class="property-type">boolean</span></dt>
-      <dd>Check this box to enable updating the LED color parameter for your switch(es)</dd>
+        <dt>Brightness When On<span class="property-type">number</span></dt>
+        <dd>LED bar brightness while the load is on. 0-100 for VZW/VZM/VTM models, 0-10 for legacy LZW models.</dd>
 
-      <dt>Send Light Brightness?<span class="property-type">boolean</span></dt>
-      <dd>Check this box to enable updating the LED brightness parameter for your switch(es) for when the relay/light is on</dd>
+        <dt>Brightness When Off<span class="property-type">number</span></dt>
+        <dd>LED bar brightness while the load is off. Same range as above.</dd>
 
-      <dt>Send Light Brightness (When Off)?<span class="property-type">boolean</span></dt>
-      <dd>Check this box to enable updating the LED brightness parameter for your switch(es) for when the relay/light is off</dd>
+        <dt>Fan Color<span class="property-type">number|string|array</span></dt>
+        <dd>(LZW36/VZM36 only) LED bar color for the fan load.</dd>
 
-      <dt>Send Fan Color?<span class="property-type">boolean</span></dt>
-      <dd>Check this box to enable updating the fan LED color parameter for your LZW36 switch(es)</dd>
+        <dt>Fan Brightness When On<span class="property-type">number</span></dt>
+        <dd>(LZW36/VZM36 only) LED bar brightness for the fan load while it is on.</dd>
 
-      <dt>Send Fan Brightness?<span class="property-type">boolean</span></dt>
-      <dd>Check this box to enable updating the fan LED brightness parameter for your LZW36 switch(es) for when the relay/fan is on</dd>
-
-      <dt>Send Fan Brightness (When Off)?<span class="property-type">boolean</span></dt>
-      <dd>Check this box to enable updating the fan LED brightness parameter for your LZW36 switch(es) for when the relay/fan is off</dd>
-
-      <dt>Use Multicast<span class="property-type">boolean</span></dt>
-      <dd>Check this box if your devices are set up to support multicasting</dd>
-  </dl>
-  <p>
-    It is possible to override values set on this node by passing values in a payload e.g.
-    <pre>
+        <dt>Fan Brightness When Off<span class="property-type">number</span></dt>
+        <dd>(LZW36/VZM36 only) LED bar brightness for the fan load while it is off.</dd>
+    </dl>
+    <p>
+      Any value configured on this node can be overridden per-message by setting the matching key on <code>msg.payload</code>. Setting a payload key activates that field even if its checkbox is unchecked. Recognized override keys: <code>integration</code> (alias <code>zwave</code>), <code>model</code> (alias <code>switchtype</code>), <code>entity_id</code>, <code>topic</code>, <code>device</code>, <code>ieee</code>, <code>color_entity</code>, <code>intensity_on_entity</code>, <code>intensity_off_entity</code>, <code>color</code>, <code>colorOff</code>, <code>brightness</code>, <code>brightnessOff</code>, <code>fanColor</code>, <code>fanBrightness</code>, <code>fanBrightnessOff</code>. For example:
+      <pre>
 msg = {
   payload: {
-    zwave: zwave_js,
-    entity_id: "light.bedroom",
-    fanColor: "Red",
-    fanBrightness: 10,
-    fanBrightnessOff: 1,
-    switchtype: "lzw36_fan",
-    multicast: true
+    integration: "zigbee2mqtt",
+    topic: "zigbee2mqtt",
+    device: "Office Switch",
+    color: "blue",
+    brightness: 100
   }
 }
-    </pre>
-  </p>
+
+or
+
+msg = {
+  payload: {
+    integration: "matter",
+    color_entity: "select.office_led_color",
+    intensity_on_entity: "number.office_led_intensity_on",
+    color: 180,
+    brightness: 34
+  }
+}
+      </pre>
+    </p>
 </script>

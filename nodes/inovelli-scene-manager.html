@@ -1,184 +1,245 @@
 <script type="text/javascript">
-  RED.nodes.registerType("inovelli-scene-manager", {
-    category: "inovelli",
-    color: "#B68181",
-    defaults: {
-      name: { value: "" },
-      nodeid: { value: "" },
-      entityid: { value: "" },
-      zwave: { value: "zwave_js" },
-      switchtype: { value: "LZW30" },
-      outputs: { value: 1 },
-      labels: { value: ["Please select a Switch Type"] },
-      passthrough: { default: false },
-    },
-    inputs: 1,
-    outputs: 1,
-    inputLabels: "Connect to an 'events: all' node",
-    outputLabels: function (index) {
-      return this.labels[index];
-    },
-    icon: "light.svg",
-    align: "right",
-    label: function () {
-      return this.name || "inovelli-scene-manager";
-    },
-    oneditprepare: function () {
-      $("#node-input-passthrough").change(function () {
-        if ($('#node-input-passthrough').is(":checked")) {
-          $(".nodeid-input").hide();
-        } else {
-          $(".nodeid-input").show();
+  (function () {
+    // Kept in sync with nodes/lib/devices.js — editor cannot require() it.
+    // Limited to devices whose registry entry has a `scenes` key (vzm36 has none).
+    const MODELS = {
+      zwave_js: [
+        ["vzw31-sn", "VZW31-SN 2-1 (Red)"], ["vzw32-sn", "VZW32-SN mmWave 2-1 (Red)"],
+        ["lzw30-sn", "LZW30-SN On/Off (Red)"], ["lzw31-sn", "LZW31-SN Dimmer (Red)"],
+        ["lzw36", "LZW36 Fan + Light (Red)"], ["lzw45", "LZW45 Light Strip (Red)"],
+      ],
+      zigbee2mqtt: [
+        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave 2-1 (Blue)"],
+        ["vzm35-sn", "VZM35-SN Fan Switch (Blue)"],
+      ],
+      zha: [
+        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave 2-1 (Blue)"],
+        ["vzm35-sn", "VZM35-SN Fan Switch (Blue)"],
+      ],
+      matter: [
+        ["vtm31-sn", "VTM31-SN 2-1 (White)"], ["vtm35-sn", "VTM35-SN Fan Switch (White)"],
+      ],
+    };
+    const IDFILTER_LABELS = {
+      zwave_js: "Node ID(s)",
+      zha: "IEEE address(es)",
+      zigbee2mqtt: "Device name(s)",
+    };
+    const BUTTONS_BASE = [
+      ["up", "Up"], ["down", "Down"], ["config", "Config"],
+    ];
+    const BUTTONS_AUX = [
+      ["aux_up", "Aux Up"], ["aux_down", "Aux Down"], ["aux_config", "Aux Config"],
+    ];
+    // Aux taps only exist on Blue Series (Zigbee2MQTT/ZHA) devices — Z-Wave and
+    // Matter devices never emit them, so hide those options for those integrations.
+    function buttonsFor(integration) {
+      return integration === "zigbee2mqtt" || integration === "zha"
+        ? BUTTONS_BASE.concat(BUTTONS_AUX)
+        : BUTTONS_BASE;
+    }
+    const TAPS = [
+      ["single", "1x"], ["double", "2x"], ["triple", "3x"], ["quadruple", "4x"],
+      ["quintuple", "5x"], ["held", "Hold"], ["release", "Release"],
+    ];
+
+    RED.nodes.registerType("inovelli-scene-manager", {
+      category: "inovelli",
+      color: "#B68181",
+      defaults: {
+        name: { value: "" },
+        integration: { value: "zwave_js" },
+        model: { value: "vzw31-sn" },
+        idfilter: { value: "" },
+        passthrough: { value: false },
+        matterup: { value: "" },
+        matterdown: { value: "" },
+        matterconfig: { value: "" },
+        mappings: { value: "[]" },
+        outputs: { value: 1 },
+      },
+      inputs: 1,
+      outputs: 1,
+      outputLabels: function (i) {
+        try {
+          const m = JSON.parse(this.mappings)[i];
+          return m ? `${m.button} ${m.tap}` : `output ${i + 1}`;
+        } catch (e) { return `output ${i + 1}`; }
+      },
+      icon: "light.svg",
+      align: "right",
+      label: function () { return this.name || "inovelli-scene-manager"; },
+      oneditprepare: function () {
+        const self = this;
+
+        function refreshModels() {
+          const integration = $("#node-input-integration").val();
+          const $model = $("#node-input-model").empty();
+          MODELS[integration].forEach(([id, label]) => $model.append(new Option(label, id)));
+          $model.val(MODELS[integration].some(([id]) => id === self.model) ? self.model : MODELS[integration][0][0]);
+          refreshVisibility();
+          refreshRows();
+          refreshButtonOptions();
         }
-      });
-    },
-    oneditsave: function () {
-      const switchtype = $("#node-input-switchtype").val();
-      let label;
-      switch (switchtype) {
-        case "LZW30":
-          label = [
-            "Tap Up on Light Paddle 1x",
-            "Tap Up on Light Paddle 2x",
-            "Tap Up on Light Paddle 3x",
-            "Tap Up on Light Paddle 4x",
-            "Tap Up on Light Paddle 5x",
-            "Hold Up on Light Paddle",
-            "Release Up on Light Paddle",
-            "Tap Down on Light Paddle 1x",
-            "Tap Down on Light Paddle 2x",
-            "Tap Down on Light Paddle 3x",
-            "Tap Down on Light Paddle 4x",
-            "Tap Down on Light Paddle 5x",
-            "Hold Down on Light Paddle",
-            "Release Down on Light Paddle",
-            "Tap Config Button 1x",
-          ];
-          break;
-        case "LZW31":
-          label = [
-            "Tap Up on Light Paddle 1x",
-            "Tap Up on Light Paddle 2x",
-            "Tap Up on Light Paddle 3x",
-            "Tap Up on Light Paddle 4x",
-            "Tap Up on Light Paddle 5x",
-            "Hold Up on Light Paddle",
-            "Release Up on Light Paddle",
-            "Tap Down on Light Paddle 1x",
-            "Tap Down on Light Paddle 2x",
-            "Tap Down on Light Paddle 3x",
-            "Tap Down on Light Paddle 4x",
-            "Tap Down on Light Paddle 5x",
-            "Hold Down on Light Paddle",
-            "Release Down on Light Paddle",
-            "Tap Config Button",
-          ];
-          break;
-        case "LZW36":
-          label = [
-            "Tap on Light Button 1x",
-            "Tap on Light Button 2x",
-            "Tap on Light Button 3x",
-            "Tap on Light Button 4x",
-            "Tap on Light Button 5x",
-            "Hold on Light Button (3 Seconds)",
-            "Release on Light (After Hold) Button",
-            "Tap on Light Rocker Up",
-            "Tap on Light Rocker Down",
-            "Tap on Fan Button 1x",
-            "Tap on Fan Button 2x",
-            "Tap on Fan Button 3x",
-            "Tap on Fan Button 4x",
-            "Tap on Fan Button 5x",
-            "Hold on Fan Button (3 Seconds)",
-            "Release on Fan (After Hold) Button",
-            "Tap on Fan Rocker Up",
-            "Tap on Fan Rocker Down",
-          ];
-          break;
-        case "LZW45":
-          label = [
-            "Tap Up on Light Paddle 1x",
-            "Tap Up on Light Paddle 2x",
-            "Tap Up on Light Paddle 3x",
-            "Tap Up on Light Paddle 4x",
-            "Tap Up on Light Paddle 5x",
-            "Hold Up on Light Paddle",
-            "Release Up on Light Paddle",
-            "Tap Down on Light Paddle 1x",
-            "Tap Down on Light Paddle 2x",
-            "Tap Down on Light Paddle 3x",
-            "Tap Down on Light Paddle 4x",
-            "Tap Down on Light Paddle 5x",
-            "Hold Down on Light Paddle",
-            "Release Down on Light Paddle",
-            "Tap Config Button 1x",
-          ];
-          break;
-      }
-      this.outputs = label.length;
-      this.labels = label;
-    },
-  });
+        function refreshButtonOptions() {
+          const integration = $("#node-input-integration").val();
+          const options = buttonsFor(integration);
+          $("#node-scene-mappings").editableList("items").each(function () {
+            const $button = $(this).find(".scene-button");
+            const current = $button.val();
+            $button.empty();
+            options.forEach(([v, l]) => $button.append($("<option/>", { value: v, text: l })));
+            $button.val(options.some(([v]) => v === current) ? current : "up");
+          });
+        }
+        function refreshVisibility() {
+          const integration = $("#node-input-integration").val();
+          $(".row-idfilter").toggle(integration !== "matter");
+          $(".row-matter").toggle(integration === "matter");
+          $("#idfilter-label-text").text(IDFILTER_LABELS[integration] || "Device ID(s)");
+        }
+        function refreshRows() {
+          const model = $("#node-input-model").val() || "";
+          const legacy = model.startsWith("lzw");
+          $(".row-mappings").toggle(!legacy);
+          $(".row-legacy-outputs").toggle(legacy);
+        }
+
+        $("#node-scene-mappings").css("min-height", "150px").editableList({
+          addItem: function (container, index, data) {
+            data.button = data.button || "up";
+            data.tap = data.tap || "single";
+            const $row = $("<div/>", { class: "scene-mapping-row" })
+              .css({ display: "flex", gap: "8px" })
+              .appendTo(container);
+            const $button = $("<select/>", { class: "scene-button" })
+              .css("width", "45%").appendTo($row);
+            buttonsFor($("#node-input-integration").val()).forEach(([v, l]) => $button.append($("<option/>", { value: v, text: l })));
+            $button.val(data.button);
+            const $tap = $("<select/>", { class: "scene-tap" })
+              .css("width", "45%").appendTo($row);
+            TAPS.forEach(([v, l]) => $tap.append($("<option/>", { value: v, text: l })));
+            $tap.val(data.tap);
+          },
+          removable: true,
+          sortable: true,
+        });
+        let seed = [];
+        try { seed = JSON.parse(self.mappings || "[]"); } catch (e) { seed = []; }
+        seed.forEach((m) => $("#node-scene-mappings").editableList("addItem", m));
+
+        $("#node-input-legacy-outputs").val(self.outputs || 1);
+
+        $("#node-input-integration").on("change", refreshModels);
+        $("#node-input-model").on("change", refreshRows);
+        refreshModels();
+      },
+      oneditsave: function () {
+        const model = $("#node-input-model").val() || "";
+        if (model.startsWith("lzw")) {
+          this.outputs = parseInt($("#node-input-legacy-outputs").val(), 10) || 1;
+          this.mappings = "[]";
+        } else {
+          const rows = [];
+          $("#node-scene-mappings").editableList("items").each(function () {
+            rows.push({
+              button: $(this).find(".scene-button").val(),
+              tap: $(this).find(".scene-tap").val(),
+            });
+          });
+          this.mappings = JSON.stringify(rows);
+          this.outputs = rows.length || 1;
+        }
+      },
+    });
+  })();
 </script>
 
 <script type="text/x-red" data-template-name="inovelli-scene-manager">
-  <style>
-    .current-outputs {
-      display: none;
-    }
-  </style>
   <div class="form-row">
       <label for="node-input-name"><i class="icon-tag"></i>Name</label>
       <input type="text" id="node-input-name" placeholder="Name">
   </div>
   <div class="form-row">
-    <label for="node-input-zwave"><i class="icon-tag"></i>Z-Wave Integration</label>
-    <select name="node-input-zwave" id="node-input-zwave">
+    <label for="node-input-integration"><i class="icon-tag"></i>Integration</label>
+    <select name="node-input-integration" id="node-input-integration">
         <option value="zwave_js">Z-Wave JS</option>
-        <option value="ozw">Open Z-Wave</option>
-        <option value="zwave">Z-Wave</option>
-    </select>
-  </div>
-  <div class="form-row nodeid-input">
-    <label for="node-input-nodeid"><i class="icon-tag"></i>Node ID(s)</label>
-    <input type="text" id="node-input-nodeid">
-  </div>
-  <div class="form-row entityid-input">
-    <label for="node-input-entityid"><i class="icon-tag"></i>Entity ID(s)</label>
-    <input type="text" id="node-input-entityid">
-  </div>
-  <div class="form-row">
-    <label for="node-input-switchtype"><i class="icon-tag"></i>Switch Type</label>
-    <select name="node-input-switchtype" id="node-input-switchtype">
-        <option value="LZW30">On/Off Switch (LZW30-SN)</option>
-        <option value="LZW31">Dimmer Switch (LZW31-SN)</option>
-        <option value="LZW36">Fan/Light Switch (LZW36)</option>
-        <option value="LZW45">Lightstrip & Controller Kit (LZW45)</option>
+        <option value="zigbee2mqtt">Zigbee2MQTT</option>
+        <option value="zha">ZHA</option>
+        <option value="matter">Matter</option>
     </select>
   </div>
   <div class="form-row">
-    <label for="node-input-passthrough"><i class="icon-tag"></i>Node ID Passthrough</label>
-    <input type="checkbox" id="node-input-passthrough">
+    <label for="node-input-model"><i class="icon-tag"></i>Model</label>
+    <select name="node-input-model" id="node-input-model">
+    </select>
+  </div>
+  <div class="form-row row-idfilter">
+    <label for="node-input-idfilter"><i class="icon-tag"></i><span id="idfilter-label-text">Node ID(s)</span></label>
+    <input type="text" id="node-input-idfilter" placeholder="comma-delimited list, blank = all">
+  </div>
+  <div class="form-row row-idfilter">
+    <label for="node-input-passthrough"><i class="icon-tag"></i>Passthrough</label>
+    <input type="checkbox" id="node-input-passthrough" style="display:inline-block; width:auto; vertical-align:top;">
+  </div>
+  <div class="form-row row-matter">
+    <label for="node-input-matterup"><i class="icon-tag"></i>Up Event Entity</label>
+    <input type="text" id="node-input-matterup" placeholder="event.office_switch_up">
+  </div>
+  <div class="form-row row-matter">
+    <label for="node-input-matterdown"><i class="icon-tag"></i>Down Event Entity</label>
+    <input type="text" id="node-input-matterdown" placeholder="event.office_switch_down">
+  </div>
+  <div class="form-row row-matter">
+    <label for="node-input-matterconfig"><i class="icon-tag"></i>Config Event Entity</label>
+    <input type="text" id="node-input-matterconfig" placeholder="event.office_switch_config">
+  </div>
+  <div class="form-row row-legacy-outputs">
+    <label for="node-input-legacy-outputs"><i class="icon-list"></i>Number of Outputs</label>
+    <input type="number" id="node-input-legacy-outputs" min="1" max="18" style="width:80px">
+  </div>
+  <div class="form-tips row-legacy-outputs">
+    <p>This model uses a fixed physical-button output map (see Help) rather than the configurable mapping list below.</p>
+  </div>
+  <div class="form-row row-mappings">
+    <label><i class="icon-list"></i>Output Mapping</label>
+  </div>
+  <div class="form-row node-input-mappings-container-row row-mappings">
+    <ol id="node-scene-mappings"></ol>
   </div>
 </script>
 
 <script type="text/x-red" data-help-name="inovelli-scene-manager">
-  <p>This node will decipher button clicks on an Inovelli Red Series switch allowing for easy scene control in Home Assistant. Just connect this input of this node to the output of a Home Assistant "events: all" node</p>
+  <p>This node decodes button-press (scene) events from an Inovelli Red (Z-Wave), Blue (Zigbee), or White (Matter) series switch and routes them to one output per configured button/tap combination, for easy scene control in Home Assistant.</p>
+
   <dl class="message-properties">
-      <dt>Z-Wave Integration<span class="property-type">string</span></dt>
-      <dd>Your Z-Wave integration used in Home Assistant (zwave_js, ozw or zwave)</dd>
+      <dt>Integration<span class="property-type">string</span></dt>
+      <dd>Which Home Assistant integration reports the switch's events: <code>zwave_js</code>, <code>zigbee2mqtt</code>, <code>zha</code>, or <code>matter</code>. Determines which of the fields below are shown/used and which input wiring is required (see below).</dd>
 
-      <dt>Node ID<span class="property-type">number</span></dt>
-      <dd>Node ID (or a comma-delimited list of node IDs) of the Inovelli switch you are trying to configure</dd>
+      <dt>Model<span class="property-type">string</span></dt>
+      <dd>The Inovelli switch model. The list is filtered to models that support scene/button events under the selected Integration.</dd>
 
-      <dt>Entity ID(s)<span class="property-type">string</span></dt>
-      <dd>Entity ID (or a comma-delimited list of entity IDs) to append to each message (sets msg.entity_id). Useful for controlling dedicated smart bulbs.</dd>
+      <dt>Node ID(s) / IEEE address(es) / Device name(s)<span class="property-type">string</span></dt>
+      <dd>(Z-Wave JS, ZHA, Zigbee2MQTT) A comma-delimited list of device identifiers to accept events from — Z-Wave JS node IDs, ZHA IEEE addresses, or Zigbee2MQTT friendly device names. Leave blank, or check Passthrough, to accept events from any device.</dd>
 
-      <dt>Switch Type<span class="property-type">number|string</span></dt>
-      <dd>Determines which Inovelli switch is being used. (LZW30-SN, LZW31-SN, LZW36, LZW45)</dd>
+      <dt>Passthrough<span class="property-type">boolean</span></dt>
+      <dd>(Z-Wave JS, ZHA, Zigbee2MQTT) Check this box to bypass the device-identifier filter above and accept scene events from any device (ideal when a single flow handles many identical switches downstream, each targeted separately).</dd>
 
-      <dt>Node ID Passthrough<span class="property-type">boolean</span></dt>
-      <dd>Disables specifying a node id, node will instead pass through all value/scene notifications (ideal when your Z-Wave network uses ALL of the same switch)</dd>
+      <dt>Up/Down/Config Event Entity<span class="property-type">string</span></dt>
+      <dd>(Matter only) The <code>event.*</code> entity ID for each physical button (Up paddle, Down paddle, Config button). Matter events are matched by entity ID rather than by device identifier/Passthrough.</dd>
+
+      <dt>Output Mapping<span class="property-type">list</span></dt>
+      <dd>(VZW/VZM/VTM models) One row per output, in order. Each row selects a Button (Up/Down/Config) and a Tap (1x-5x, Hold, Release); a message is sent out the corresponding output when that button/tap combination is detected. Add, remove, and reorder rows as needed — the node's output count always matches the number of rows.</dd>
+
+      <dt>Number of Outputs<span class="property-type">number</span></dt>
+      <dd>(Legacy LZW30/LZW31/LZW36/LZW45 models only) These models use a fixed physical-button-to-output map carried over from the original scene manager, so there is no configurable mapping list. Set this to the number of outputs your flow needs to wire up (see the device's original scene table for the exact button/output order).</dd>
   </dl>
+
+  <p>Wire the input of this node to one of the following, depending on Integration:</p>
+  <ul>
+    <li><b>Z-Wave JS</b> and <b>ZHA</b> — a Home Assistant <code>events: all</code> node (this node listens for <code>zwave_js_value_notification</code> and <code>zha_event</code> events respectively).</li>
+    <li><b>Zigbee2MQTT</b> — an <code>mqtt in</code> node subscribed to <code>zigbee2mqtt/&lt;device name&gt;</code> (or its <code>.../action</code> subtopic); both raw string and parsed-JSON action payloads are accepted.</li>
+    <li><b>Matter</b> — a Home Assistant <code>events: state</code> node watching the three <code>event.*</code> entities configured above.</li>
+  </ul>
+  <p>Note: auxiliary-switch button taps are supported for Blue Series (Zigbee) devices — reported as Zigbee2MQTT <code>aux_up</code>/<code>aux_down</code>/<code>aux_config</code> actions or ZHA <code>button_4</code>/<code>button_5</code>/<code>button_6</code> events — and are routed via the Aux Up/Aux Down/Aux Config button options in the Output Mapping list. Red Series 2-1 aux taps (Z-Wave Central Scene keys 004&ndash;006) are <em>not</em> supported, because Inovelli's per-button key assignment is unverified.</p>
 </script>

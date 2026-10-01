@@ -1,0 +1,11 @@
+[
+  { "id": "inject1", "type": "inject", "name": "Trigger", "props": [{ "p": "payload" }],
+    "payload": "{\"color\":\"blue\",\"effect\":\"Chase\",\"duration\":\"30 seconds\",\"level\":80}",
+    "payloadType": "json", "wires": [["notif1"]] },
+  { "id": "notif1", "type": "inovelli-notification-manager", "name": "Office notification",
+    "integration": "matter", "model": "vtm31-sn",
+    "matterlight": "light.office_rgb", "mattereffect": "select.office_led_effect", "mattercolor": "select.office_led_color",
+    "color": 0, "level": 100, "duration": 255, "effect": "Chase", "led": "all",
+    "clear": false, "multicast": false, "wires": [["action1"]] },
+  { "id": "action1", "type": "api-call-service", "name": "HA Action", "wires": [[]] }
+]

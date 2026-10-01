@@ -1,4 +1,4 @@
-# Instant Notifications - Multicast Method
+# Instant Notifications - Multicast Method (node-red-contrib-ha-inovelli, Z-Wave JS)
 This requires a bit more setup but replaces the service zwave_js.bulk_set_parameters with the faster zwave_js.multicast_set_value alternative. Requires relevant nodes to be on the same Z-Wave network with the same security level.
 
 ## How To Use:

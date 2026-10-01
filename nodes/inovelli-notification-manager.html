@@ -1,99 +1,115 @@
 <script type="text/javascript">
-  RED.nodes.registerType("inovelli-notification-manager", {
-    category: "inovelli",
-    color: "#B68181",
-    defaults: {
-      name: { value: "" },
-      nodeid: { value: "" },
-      entityid: { value: "" },
-      zwave: { value: "zwave_js" },
-      color: { value: 0 },
-      brightness: { value: 5 },
-      duration: { value: 10 },
-      effect: { value: 4 },
-      switchtype: { value: 8 },
-      clear: { value: false },
-      multicast: { value: false },
-    },
-    inputs: 1,
-    outputs: 1,
-    outputLabels: "Connect to a call-service node",
-    icon: "light.svg",
-    align: "right",
-    label: function () {
-      return this.name || "inovelli-notification-manager";
-    },
-    oneditprepare: function () {
-      const onOffOptions = `<option value="0">Off</option>
-          <option value="1">Solid</option>
-          <option value="2">Fast Blink</option>
-          <option value="3">Slow Blink</option>
-          <option value="4">Pulse</option>`;
+  (function () {
+    // Kept in sync with nodes/lib/devices.js — editor cannot require() it.
+    const MODELS = {
+      zwave_js: [
+        ["vzw31-sn", "VZW31-SN 2-1 (Red)"], ["vzw32-sn", "VZW32-SN mmWave 2-1 (Red)"],
+        ["lzw30-sn", "LZW30-SN On/Off (Red)"], ["lzw31-sn", "LZW31-SN Dimmer (Red)"],
+        ["lzw36", "LZW36 Fan + Light (Red)"],
+      ],
+      zigbee2mqtt: [
+        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave 2-1 (Blue)"],
+        ["vzm35-sn", "VZM35-SN Fan Switch (Blue)"],
+      ],
+      zha: [
+        ["vzm31-sn", "VZM31-SN 2-1 (Blue)"], ["vzm32-sn", "VZM32-SN mmWave 2-1 (Blue)"],
+        ["vzm35-sn", "VZM35-SN Fan Switch (Blue)"],
+      ],
+      matter: [
+        ["vtm31-sn", "VTM31-SN 2-1 (White)"], ["vtm35-sn", "VTM35-SN Fan Switch (White)"],
+      ],
+    };
+    const EFFECTS_21_ALL = ["off", "solid", "fast_blink", "slow_blink", "pulse", "chase",
+      "open_close", "small_to_big", "aurora", "slow_falling", "medium_falling", "fast_falling",
+      "slow_rising", "medium_rising", "fast_rising", "medium_blink", "slow_chase", "fast_chase",
+      "fast_siren", "slow_siren"];
+    const EFFECTS_21_INDIVIDUAL = ["off", "solid", "fast_blink", "slow_blink", "pulse", "chase",
+      "falling", "rising", "aurora"];
+    const EFFECTS_LZW_SWITCH = ["off", "solid", "fast_blink", "slow_blink", "pulse"];
+    const EFFECTS_LZW_DIMMER = ["off", "solid", "chase", "fast_blink", "slow_blink", "pulse"];
+    const EFFECTS_MATTER = ["Solid", "Blink", "Chase", "Siren"]; // free-text; device-defined options
 
-      const dimmerOptions = `<option value="0">Off</option>
-          <option value="1">Solid</option>
-          <option value="2">Chase</option>
-          <option value="3">Fast Blink</option>
-          <option value="4">Slow Blink</option>
-          <option value="5">Pulse</option>`;
+    function effectsFor(model, led) {
+      if (model.startsWith("vtm")) return EFFECTS_MATTER;
+      if (model.startsWith("lzw")) return model === "lzw30-sn" ? EFFECTS_LZW_SWITCH : EFFECTS_LZW_DIMMER;
+      return led === "all" ? EFFECTS_21_ALL : EFFECTS_21_INDIVIDUAL;
+    }
+    function pretty(name) {
+      return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    }
 
-      $("#node-input-zwave").change(function () {
-        switch (this.value) {
-          case "zwave_js":
-            $(".nodeid-input").hide();
-            $(".entityid-input").show();
-            $(".multicast-input").show();
-            break;
-          default:
-            $(".nodeid-input").show();
-            $(".entityid-input").hide();
-            $(".multicast-input").hide();
-            break;
+    RED.nodes.registerType("inovelli-notification-manager", {
+      category: "inovelli",
+      color: "#B68181",
+      defaults: {
+        name: { value: "" },
+        integration: { value: "zwave_js" },
+        model: { value: "vzw31-sn" },
+        entityid: { value: "" },
+        basetopic: { value: "zigbee2mqtt" },
+        devicename: { value: "" },
+        ieee: { value: "" },
+        matterlight: { value: "" },
+        mattereffect: { value: "" },
+        mattercolor: { value: "" },
+        color: { value: 0 },
+        level: { value: 100 },
+        duration: { value: 255 },
+        effect: { value: "pulse" },
+        led: { value: "all" },
+        clear: { value: false },
+        multicast: { value: false },
+      },
+      inputs: 1,
+      outputs: 1,
+      outputLabels: "Connect to a Home Assistant action node",
+      icon: "light.svg",
+      align: "right",
+      label: function () { return this.name || "inovelli-notification-manager"; },
+      oneditprepare: function () {
+        const self = this;
+
+        function refreshModels() {
+          const integration = $("#node-input-integration").val();
+          const $model = $("#node-input-model").empty();
+          MODELS[integration].forEach(([id, label]) => $model.append(new Option(label, id)));
+          $model.val(MODELS[integration].some(([id]) => id === self.model) ? self.model : MODELS[integration][0][0]);
+          refreshVisibility();
+          refreshEffects();
         }
-      });
-      $("#node-input-switchtype").change(function () {
-        const effectInput = $("#node-input-effect");
-        let previous;
-        if (previous) previous = "0";
-        if (!previous) previous = effectInput.val();
-        if (this.value === "8") {
-          effectInput.html(onOffOptions);
-        } else {
-          effectInput.html(dimmerOptions);
+        function refreshVisibility() {
+          const integration = $("#node-input-integration").val();
+          $(".row-zwave").toggle(integration === "zwave_js");
+          $(".row-z2m").toggle(integration === "zigbee2mqtt");
+          $(".row-zha").toggle(integration === "zha");
+          $(".row-matter").toggle(integration === "matter");
+          $(".row-led").toggle(integration !== "matter" && !$("#node-input-model").val().startsWith("lzw"));
         }
-        effectInput.val(previous);
-      });
-      $("#node-input-color").change(function () {
-        var color = document.getElementById("node-input-color");
-        var colorOutput = document.getElementById("colorOutput");
-        colorOutput.innerHTML = color.value;
-        color.oninput = function () {
-          colorOutput.innerHTML = this.value;
-        };
-      });
-      $("#node-input-brightness").change(function () {
-        var brightness = document.getElementById("node-input-brightness");
-        var brightnessOutput = document.getElementById("brightnessOutput");
-        brightnessOutput.innerHTML = brightness.value;
-        brightness.oninput = function () {
-          brightnessOutput.innerHTML = this.value;
-        };
-      });
-      $("#node-input-clear").change(function () {
-        if ($('#node-input-clear').is(":checked")) {
-          $(".color-input").hide();
-          $(".brightness-input").hide();
-          $(".duration-input").hide();
-          $(".effect-input").hide();
-        } else {
-          $(".color-input").show();
-          $(".brightness-input").show();
-          $(".duration-input").show();
-          $(".effect-input").show();
+        function refreshEffects() {
+          const model = $("#node-input-model").val();
+          const led = $("#node-input-led").val() || "all";
+          const $effect = $("#node-input-effect");
+          const previous = $effect.val() || self.effect;
+          $effect.empty();
+          effectsFor(model, led).forEach((e) => $effect.append(new Option(pretty(e), e)));
+          if ($effect.find(`option[value="${previous}"]`).length) $effect.val(previous);
+          const max = model.startsWith("lzw") ? 10 : 100;
+          $("#node-input-level").attr("max", max);
+          $("#levelOutput").text($("#node-input-level").val());
         }
-      });
-    },
-  });
+
+        $("#node-input-integration").on("change", refreshModels);
+        $("#node-input-model").on("change", function () { refreshVisibility(); refreshEffects(); });
+        $("#node-input-led").on("change", refreshEffects);
+        $("#node-input-color").on("input change", function () { $("#colorOutput").text(this.value); });
+        $("#node-input-level").on("input change", function () { $("#levelOutput").text(this.value); });
+        $("#node-input-clear").on("change", function () {
+          $(".row-notify").toggle(!$(this).is(":checked"));
+        });
+        refreshModels();
+      },
+    });
+  })();
 </script>
 
 <script type="text/x-red" data-template-name="inovelli-notification-manager">
@@ -135,9 +151,6 @@
       background: linear-gradient(to right, rgb(0,0,0), rgb(255,255,255));
       outline: none;
     }
-    .brightness-input input {
-      width: 100% !important;
-    }
     .brightness-picker-input {
       display: inline-block;
       width: 70%;
@@ -160,46 +173,79 @@
       <input type="text" id="node-input-name" placeholder="Name">
   </div>
   <div class="form-row">
-    <label for="node-input-zwave"><i class="icon-tag"></i>Z-Wave Integration</label>
-    <select name="node-input-zwave" id="node-input-zwave">
+    <label for="node-input-integration"><i class="icon-tag"></i>Integration</label>
+    <select name="node-input-integration" id="node-input-integration">
         <option value="zwave_js">Z-Wave JS</option>
-        <option value="ozw">OpenZWave (1.6)</option>
-        <option value="zwave">Z-Wave (Deprecated)</option>
+        <option value="zigbee2mqtt">Zigbee2MQTT</option>
+        <option value="zha">ZHA</option>
+        <option value="matter">Matter</option>
     </select>
   </div>
-  <div class="form-row nodeid-input">
-    <label for="node-input-nodeid"><i class="icon-tag"></i>Node ID(s)</label>
-    <input type="text" id="node-input-nodeid">
+  <div class="form-row">
+    <label for="node-input-model"><i class="icon-tag"></i>Model</label>
+    <select name="node-input-model" id="node-input-model">
+    </select>
   </div>
-  <div class="form-row entityid-input">
+  <div class="form-row row-zwave">
     <label for="node-input-entityid"><i class="icon-tag"></i>Entity ID(s)</label>
     <input type="text" id="node-input-entityid">
   </div>
-  <div class="form-row">
-    <label for="node-input-switchtype"><i class="icon-tag"></i>Switch Type</label>
-    <select name="node-input-switchtype" id="node-input-switchtype">
-        <option value="8">On/Off (LZW30-SN)</option>
-        <option value="16">Dimmer (LZW31-SN)</option>
-        <option value="24">Light Dimmer (LZW36)</option>
-        <option value="25">Fan Dimmer (LZW36)</option>
-        <option value="49">Fan & Light (LZW36)</option>
+  <div class="form-row row-zwave">
+    <label for="node-input-multicast"><i class="icon-tag"></i>Use Multicast</label>
+    <input type="checkbox" id="node-input-multicast">
+  </div>
+  <div class="form-row row-z2m">
+    <label for="node-input-basetopic"><i class="icon-tag"></i>Base Topic</label>
+    <input type="text" id="node-input-basetopic">
+  </div>
+  <div class="form-row row-z2m">
+    <label for="node-input-devicename"><i class="icon-tag"></i>Device Name</label>
+    <input type="text" id="node-input-devicename">
+  </div>
+  <div class="form-row row-zha">
+    <label for="node-input-ieee"><i class="icon-tag"></i>IEEE Address</label>
+    <input type="text" id="node-input-ieee">
+  </div>
+  <div class="form-row row-matter">
+    <label for="node-input-matterlight"><i class="icon-tag"></i>LED Light Entity</label>
+    <input type="text" id="node-input-matterlight">
+  </div>
+  <div class="form-row row-matter">
+    <label for="node-input-mattereffect"><i class="icon-tag"></i>LED Effect Select Entity</label>
+    <input type="text" id="node-input-mattereffect">
+  </div>
+  <div class="form-row row-matter">
+    <label for="node-input-mattercolor"><i class="icon-tag"></i>LED Color Select Entity</label>
+    <input type="text" id="node-input-mattercolor">
+  </div>
+  <div class="form-row row-led row-notify">
+    <label for="node-input-led"><i class="icon-tag"></i>LED</label>
+    <select name="node-input-led" id="node-input-led">
+        <option value="all">All</option>
+        <option value="1">LED 1 (Bottom)</option>
+        <option value="2">LED 2</option>
+        <option value="3">LED 3</option>
+        <option value="4">LED 4</option>
+        <option value="5">LED 5</option>
+        <option value="6">LED 6</option>
+        <option value="7">LED 7 (Top)</option>
     </select>
   </div>
-  <div class="form-row color-input">
+  <div class="form-row row-notify color-input">
     <label for="node-input-color"><i class="icon-tag"></i>Color</label>
     <div class="color-picker-input">
-      <input type="range" id="node-input-color" min="0" max="361" class="color-picker" oninput="hue.value = this.value">
+      <input type="range" id="node-input-color" min="0" max="361" class="color-picker">
     </div>
     <output id="colorOutput"></output>
   </div>
-  <div class="form-row brightness-input">
-    <label for="node-input-brightness"><i class="icon-tag"></i>Brightness Level</label>
+  <div class="form-row row-notify">
+    <label for="node-input-level"><i class="icon-tag"></i>Level</label>
     <div class="brightness-picker-input">
-      <input type="range" id="node-input-brightness" min="0" max="10" class="brightness-picker" oninput="brightness.value = this.value">
+      <input type="range" id="node-input-level" min="0" max="100" class="brightness-picker">
     </div>
-    <output id="brightnessOutput"></output>
+    <output id="levelOutput"></output>
   </div>
-  <div class="form-row duration-input">
+  <div class="form-row row-notify">
     <label for="node-input-duration"><i class="icon-tag"></i>Duration</label>
     <select name="node-input-duration" id="node-input-duration">
         <option value="0">Off</option>
@@ -230,89 +276,95 @@
         <option value="255">Indefinitely</option>
     </select>
   </div>
-  <div class="form-row effect-input">
-    <label for="node-input-effect"><i class="icon-tag"></i>Effect Type</label>
+  <div class="form-row row-notify">
+    <label for="node-input-effect"><i class="icon-tag"></i>Effect</label>
     <select name="node-input-effect" id="node-input-effect">
-        <option value="0">Placeholder</option>
-        <option value="1">Placeholder</option>
-        <option value="2">Placeholder</option>
-        <option value="3">Placeholder</option>
-        <option value="4">Placeholder</option>
-        <option value="5">Placeholder</option>
     </select>
   </div>
   <div class="form-row">
     <label for="node-input-clear"><i class="icon-tag"></i>Clear Notification</label>
     <input type="checkbox" id="node-input-clear">
   </div>
-  <div class="form-row multicast-input">
-    <label for="node-input-multicast"><i class="icon-tag"></i>Use Multicast</label>
-    <input type="checkbox" id="node-input-multicast">
-  </div>
 </script>
 
 <script type="text/x-red" data-help-name="inovelli-notification-manager">
-    <p>This node will help construct the value for controlling LED notifications on an Inovelli Red Series switch. The output should be connected to a Home Assistant call service node.</p>
+    <p>This node constructs the message for controlling LED bar notifications on an Inovelli Red (Z-Wave), Blue (Zigbee), or White (Matter) series switch. The output should be connected directly to a Home Assistant action node (<code>msg.payload = { action, target?, data }</code>).</p>
     <dl class="message-properties">
-        <dt>Z-Wave Integration<span class="property-type">string</span></dt>
-        <dd>Your Z-Wave integration used in Home Assistant (zwave_js, ozw, or zwave)</dd>
+        <dt>Integration<span class="property-type">string</span></dt>
+        <dd>Which Home Assistant integration controls the device: <code>zwave_js</code>, <code>zigbee2mqtt</code>, <code>zha</code>, or <code>matter</code>. Determines which of the fields below are shown/used.</dd>
+
+        <dt>Model<span class="property-type">string</span></dt>
+        <dd>The Inovelli switch model. The list is filtered to models supported by the selected Integration.</dd>
 
         <dt>Entity ID(s)<span class="property-type">string</span></dt>
-        <dd>(For Z-Wave JS) Entity (or a comma-delimited list of entity IDs) to set the configuration parameter on</dd>
-
-        <dt>Node ID(s)<span class="property-type">number</span></dt>
-        <dd>(For OpenZWave or Z-Wave) Node ID (or a comma-delimited list of node IDs) of the Inovelli switch you are trying to configure</dd>
-
-        <dt>Switch Type<span class="property-type">number|string</span></dt>
-        <dd>Determines which parameter to set. (LZW30-SN, LZW31-SN, LZW36 (fan and/or light))</dd>
-
-        <dt>Color<span class="property-type">number|string|array</span></dt>
-        <dd>Color you want to display (accepts color names, RGB arrays, hexadeciaml and 0-360* hue values) *361=white</dd>
-
-        <dt>Brightness Level<span class="property-type">number</span></dt>
-        <dd>Brightness level of the LED light (0-10) for the notification</dd>
-
-        <dt>Duration<span class="property-type">number|string</span></dt>
-        <dd>Duration to display the notification</dd>
-
-        <dt>Effect<span class="property-type">number|string</span></dt>
-        <dd>Effect for the notifications. (Off, Solid, Chase, Fast Blink, Slow Blink, Pulse)</dd>
-
-        <dt>Clear Notification<span class="property-type">boolean</span></dt>
-        <dd>Check this box or set msg.payload.clear to true to clear the current LED notification</dd>
+        <dd>(Z-Wave JS only) Entity ID, or a comma-delimited list of entity IDs, to target.</dd>
 
         <dt>Use Multicast<span class="property-type">boolean</span></dt>
-        <dd>Check this box if your devices are set up to support multicasting</dd>
+        <dd>(Z-Wave JS only) Check this box to send the notification via Z-Wave multicast when targeting multiple devices.</dd>
+
+        <dt>Base Topic<span class="property-type">string</span></dt>
+        <dd>(Zigbee2MQTT only) The MQTT base topic configured for your Zigbee2MQTT bridge (default <code>zigbee2mqtt</code>).</dd>
+
+        <dt>Device Name<span class="property-type">string</span></dt>
+        <dd>(Zigbee2MQTT only) The friendly name of the device as known to Zigbee2MQTT.</dd>
+
+        <dt>IEEE Address<span class="property-type">string</span></dt>
+        <dd>(ZHA only) The IEEE address of the device to target.</dd>
+
+        <dt>LED Light Entity<span class="property-type">string</span></dt>
+        <dd>(Matter only) The <code>light</code> entity that represents the switch's LED bar.</dd>
+
+        <dt>LED Effect Select Entity<span class="property-type">string</span></dt>
+        <dd>(Matter only) The <code>select</code> entity used to choose the LED effect.</dd>
+
+        <dt>LED Color Select Entity<span class="property-type">string</span></dt>
+        <dd>(Matter only) The <code>select</code> entity used to choose the LED color.</dd>
+
+        <dt>LED<span class="property-type">string</span></dt>
+        <dd>Which LED segment to target: All, or an individual LED 1 (bottom) through 7 (top). Not shown for Matter or legacy LZW models, which only support a single LED bar.</dd>
+
+        <dt>Color<span class="property-type">number|string|array</span></dt>
+        <dd>Color to display (accepts color names, RGB arrays, hex, and 0-360&deg; hue values; 361=white).</dd>
+
+        <dt>Level<span class="property-type">number</span></dt>
+        <dd>Brightness level of the LED notification. 0-100 for VZW/VZM/VTM models, 0-10 for legacy LZW models.</dd>
+
+        <dt>Duration<span class="property-type">number|string</span></dt>
+        <dd>How long to display the notification before it clears automatically.</dd>
+
+        <dt>Effect<span class="property-type">string</span></dt>
+        <dd>The notification effect to play. Options are filtered by Model and LED selection.</dd>
+
+        <dt>Clear Notification<span class="property-type">boolean</span></dt>
+        <dd>Check this box, or set <code>msg.payload.clear</code> to <code>true</code>, to clear the current LED notification instead of setting a new one.</dd>
     </dl>
     <p>
-      It is possible to override values set on this node by passing values in a payload e.g.
+      Any value configured on this node can be overridden per-message by setting the matching key on <code>msg.payload</code>. Recognized override keys: <code>integration</code> (alias <code>zwave</code>), <code>model</code> (alias <code>switchtype</code>), <code>entity_id</code>, <code>topic</code>, <code>device</code>, <code>ieee</code>, <code>light_entity</code>, <code>effect_entity</code>, <code>color_entity</code>, <code>color</code>, <code>level</code> (alias <code>brightness</code>), <code>duration</code>, <code>effect</code>, <code>led</code>, <code>clear</code>, <code>multicast</code>. For example:
       <pre>
-  msg = {
-    payload: {
-      zwave: zwave_js,
-      entity_id: "light.bedroom",
-      color: "Red",
-      duration: "10 Seconds",
-      effect: "Slow Blink",
-      brightness: 10,
-      switchtype: "combo_fan"
-    }
+msg = {
+  payload: {
+    integration: "zwave_js",
+    entity_id: "light.bedroom",
+    color: "red",
+    duration: "30 seconds",
+    effect: "slow_blink",
+    level: 100
   }
+}
 
-  or
+or
 
-  msg = {
-    payload: {
-      zwave: ozw,
-      node_id: 13,
-      color: [255,0,00],
-      duration: 10,
-      effect: 3,
-      brightness: 10,
-      switchtype: 25,
-      clear: false
-    }
+msg = {
+  payload: {
+    integration: "zigbee2mqtt",
+    topic: "zigbee2mqtt",
+    device: "Bedroom Switch",
+    color: 240,
+    duration: 255,
+    effect: "aurora",
+    level: 100
   }
+}
       </pre>
     </p>
 </script>
