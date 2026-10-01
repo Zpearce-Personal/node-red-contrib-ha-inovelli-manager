@@ -136,3 +136,4 @@ This option lets you specify your switch model (LZW30-SN, LZW31-SN, LZW36, and L
 ### Node ID Passthrough
 
 Enable to process all scene messages used by your Z-Wave integration. Recommended ONLY for those with a Z-Wave network made of the same type of switch.
+
