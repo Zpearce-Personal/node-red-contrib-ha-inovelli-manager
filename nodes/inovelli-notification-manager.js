@@ -139,7 +139,7 @@ module.exports = function (RED) {
       }
 
       function inputBrightnessCheck(brightness) {
-        if (brightness < 0 || brightness > 11) {
+        if (brightness < 0 || brightness > 10) {
           err = `Invalid brightness value: ${brightness}. Please enter a value between 0 and 10`;
           if (done) {
             done(err);
