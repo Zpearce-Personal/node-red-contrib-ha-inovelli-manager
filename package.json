@@ -22,6 +22,9 @@
   },
   "author": "Ryan Johnson",
   "license": "MIT",
+  "scripts": {
+    "test": "mocha test"
+  },
   "devDependencies": {
     "mocha": "^8.3.1",
     "node-red": "^1.2.9",
