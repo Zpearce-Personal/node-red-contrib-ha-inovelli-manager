@@ -277,21 +277,25 @@ module.exports = function (RED) {
           if (toggleFanBrightness || payload.fanBrightness) {
             fanBrightness = payload.fanBrightness || presetFanBrightness;
             inputBrightnessCheck(fanBrightness, "on");
-            constructMsg(
-              "fanBrightness",
-              fanBrightness,
-              output.fanBrightnessParam
-            );
+            if (!err) {
+              constructMsg(
+                "fanBrightness",
+                fanBrightness,
+                output.fanBrightnessParam
+              );
+            }
           }
           if (toggleFanBrightnessOff || payload.fanBrightnessOff) {
             fanBrightnessOff =
               payload.fanBrightnessOff || presetFanBrightnessOff;
             inputBrightnessCheck(fanBrightnessOff, "off");
-            constructMsg(
-              "fanBrightnessOff",
-              fanBrightnessOff,
-              output.fanBrightnessOffParam
-            );
+            if (!err) {
+              constructMsg(
+                "fanBrightnessOff",
+                fanBrightnessOff,
+                output.fanBrightnessOffParam
+              );
+            }
           }
         }
       }

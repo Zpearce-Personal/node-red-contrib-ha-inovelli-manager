@@ -1,6 +1,7 @@
 const assert = require("assert");
 const helper = require("node-red-node-test-helper");
 const ledManagerNode = require("../nodes/inovelli-led-manager.js");
+const notificationManagerNode = require("../nodes/inovelli-notification-manager.js");
 
 helper.init(require.resolve("node-red"));
 
@@ -45,6 +46,111 @@ describe("inovelli-led-manager Node - brightness validation", function () {
         }
       });
       n1.receive({ payload: { zwave: "zwave_js", switchtype: "switch", brightness: 10 } });
+    });
+  });
+
+  it("rejects invalid fanBrightness without sending a message", function (done) {
+    const flow = [
+      { id: "n1", type: "inovelli-led-manager", name: "test", wires: [["n2"]] },
+      { id: "n2", type: "helper" },
+    ];
+    helper.load(ledManagerNode, flow, function () {
+      const n1 = helper.getNode("n1");
+      const n2 = helper.getNode("n2");
+      n2.on("input", function () {
+        done(new Error("expected no message to be sent for invalid fanBrightness"));
+      });
+      n1.on("call:error", function (call) {
+        assert.ok(/Invalid brightness value/.test(call.args[0]));
+        done();
+      });
+      n1.receive({ payload: { zwave: "zwave_js", switchtype: "fan", fanBrightness: 11 } });
+    });
+  });
+
+  it("rejects invalid fanBrightnessOff without sending a message", function (done) {
+    const flow = [
+      { id: "n1", type: "inovelli-led-manager", name: "test", wires: [["n2"]] },
+      { id: "n2", type: "helper" },
+    ];
+    helper.load(ledManagerNode, flow, function () {
+      const n1 = helper.getNode("n1");
+      const n2 = helper.getNode("n2");
+      n2.on("input", function () {
+        done(new Error("expected no message to be sent for invalid fanBrightnessOff"));
+      });
+      n1.on("call:error", function (call) {
+        assert.ok(/Invalid brightness value/.test(call.args[0]));
+        done();
+      });
+      n1.receive({ payload: { zwave: "zwave_js", switchtype: "fan", fanBrightnessOff: 11 } });
+    });
+  });
+});
+
+describe("inovelli-notification-manager Node - brightness validation", function () {
+  afterEach(function () {
+    helper.unload();
+  });
+
+  it("accepts brightness 10", function (done) {
+    const flow = [
+      { id: "n1", type: "inovelli-notification-manager", name: "test", wires: [["n2"]] },
+      { id: "n2", type: "helper" },
+    ];
+    helper.load(notificationManagerNode, flow, function () {
+      const n1 = helper.getNode("n1");
+      const n2 = helper.getNode("n2");
+      let errored = false;
+      n1.on("call:error", function () {
+        errored = true;
+      });
+      n2.on("input", function () {
+        try {
+          assert.strictEqual(errored, false);
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+      n1.receive({
+        payload: {
+          zwave: "zwave_js",
+          switchtype: "switch",
+          color: "red",
+          duration: 1,
+          effect: 1,
+          brightness: 10,
+        },
+      });
+    });
+  });
+
+  it("rejects brightness 11", function (done) {
+    const flow = [
+      { id: "n1", type: "inovelli-notification-manager", name: "test", wires: [["n2"]] },
+      { id: "n2", type: "helper" },
+    ];
+    helper.load(notificationManagerNode, flow, function () {
+      const n1 = helper.getNode("n1");
+      const n2 = helper.getNode("n2");
+      n2.on("input", function () {
+        done(new Error("expected no message to be sent for invalid brightness"));
+      });
+      n1.on("call:error", function (call) {
+        assert.ok(/Invalid brightness value/.test(call.args[0]));
+        done();
+      });
+      n1.receive({
+        payload: {
+          zwave: "zwave_js",
+          switchtype: "switch",
+          color: "red",
+          duration: 1,
+          effect: 1,
+          brightness: 11,
+        },
+      });
     });
   });
 });
